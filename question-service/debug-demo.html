@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Debug LeetCode Demo</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #1a1a1a;
+        color: white;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .question {
+        background: #2a2a2a;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .nav-buttons {
+        text-align: center;
+        margin: 20px 0;
+      }
+      button {
+        background: #ffa116;
+        color: #1a1a1a;
+        border: none;
+        padding: 10px 20px;
+        margin: 0 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+      .error {
+        color: #ff6b6b;
+        background: #3a1a1a;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        color: #51cf66;
+        background: #1a3a1a;
+        padding: 10px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Debug LeetCode Demo</h1>
+      <div id="status">Loading...</div>
+      <div id="questionInfo"></div>
+      <div class="nav-buttons">
+        <button id="prevBtn" onclick="prevQuestion()">← Previous</button>
+        <button id="nextBtn" onclick="nextQuestion()">Next →</button>
+      </div>
+      <div id="question" class="question"></div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:3001";
+      let allQuestions = [];
+      let currentQuestionIndex = 0;
+
+      // API call function
+      async function apiCall(endpoint, options = {}) {
+        try {
+          console.log(`Making API call to: ${API_BASE}${endpoint}`);
+          const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: options.method || "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...options.headers,
+            },
+            mode: "cors",
+            credentials: "omit",
+            ...options,
+          });
+
+          console.log("Response status:", response.status);
+          console.log("Response ok:", response.ok);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          console.log("Response data:", data);
+
+          // Return the API response as-is, don't override the success field
+          return data;
+        } catch (error) {
+          console.error("API call failed:", error);
+          return { success: false, error: error.message };
+        }
+      }
+
+      // Load questions from MongoDB
+      async function loadQuestions() {
+        document.getElementById("status").innerHTML =
+          '<div class="success">Loading questions from API...</div>';
+        console.log("Loading questions from API...");
+
+        try {
+          const result = await apiCall("/api/questions?limit=50");
+          console.log("API result:", result);
+          console.log("Result success:", result.success);
+          console.log("Result data:", result.data);
+          console.log(
+            "Data length:",
+            result.data ? result.data.length : "undefined"
+          );
+
+          if (result.success && result.data) {
+            allQuestions = result.data;
+            console.log("Loaded questions:", allQuestions.length);
+
+            if (allQuestions.length > 0) {
+              document.getElementById(
+                "status"
+              ).innerHTML = `<div class="success">✅ Loaded ${allQuestions.length} questions successfully!</div>`;
+              displayQuestion(0);
+              updateNavigationButtons();
+            } else {
+              console.log("No questions in data array");
+              showError("No questions found in database");
+            }
+          } else {
+            console.error("API call failed or no data:", result);
+            showError(
+              `Failed to load questions: ${result.error || "No data returned"}`
+            );
+          }
+        } catch (error) {
+          console.error("Exception in loadQuestions:", error);
+          showError(`Exception: ${error.message}`);
+        }
+      }
+
+      // Display a specific question
+      function displayQuestion(index) {
+        if (index < 0 || index >= allQuestions.length) return;
+
+        currentQuestionIndex = index;
+        const question = allQuestions[index];
+
+        console.log(`Displaying question ${index + 1}:`, question);
+
+        // Update question info
+        document.getElementById("questionInfo").innerHTML = `
+                <h3>Question ${index + 1} of ${allQuestions.length}</h3>
+                <p><strong>Title:</strong> ${question.title}</p>
+                <p><strong>Difficulty:</strong> ${question.difficulty}</p>
+                <p><strong>Categories:</strong> ${question.categories.join(
+                  ", "
+                )}</p>
+            `;
+
+        // Update question content
+        document.getElementById("question").innerHTML = `
+                <h2>${question.title}</h2>
+                <p><strong>Difficulty:</strong> ${question.difficulty}</p>
+                <p><strong>Categories:</strong> ${question.categories.join(
+                  ", "
+                )}</p>
+                <p><strong>Description:</strong> ${question.description}</p>
+                
+                ${
+                  question.examples && question.examples.length > 0
+                    ? `
+                    <h3>Examples:</h3>
+                    ${question.examples
+                      .map(
+                        (ex, i) => `
+                        <div style="background: #3a3a3a; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                            <strong>Example ${i + 1}:</strong><br>
+                            <strong>Input:</strong> ${ex.input}<br>
+                            <strong>Output:</strong> ${ex.output}
+                            ${
+                              ex.explanation
+                                ? `<br><strong>Explanation:</strong> ${ex.explanation}`
+                                : ""
+                            }
+                        </div>
+                    `
+                      )
+                      .join("")}
+                `
+                    : ""
+                }
+                
+                ${
+                  question.constraints && question.constraints.length > 0
+                    ? `
+                    <h3>Constraints:</h3>
+                    <ul>
+                        ${question.constraints
+                          .map((constraint) => `<li>${constraint}</li>`)
+                          .join("")}
+                    </ul>
+                `
+                    : ""
+                }
+                
+                ${
+                  question.hints && question.hints.length > 0
+                    ? `
+                    <h3>Hints:</h3>
+                    <ul>
+                        ${question.hints
+                          .map((hint) => `<li>${hint}</li>`)
+                          .join("")}
+                    </ul>
+                `
+                    : ""
+                }
+            `;
+
+        updateNavigationButtons();
+      }
+
+      // Update navigation buttons
+      function updateNavigationButtons() {
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+
+        prevBtn.disabled = currentQuestionIndex === 0;
+        nextBtn.disabled = currentQuestionIndex === allQuestions.length - 1;
+
+        console.log(
+          `Navigation: Prev=${!prevBtn.disabled}, Next=${!nextBtn.disabled}`
+        );
+      }
+
+      // Navigation functions
+      function nextQuestion() {
+        if (currentQuestionIndex < allQuestions.length - 1) {
+          displayQuestion(currentQuestionIndex + 1);
+        }
+      }
+
+      function prevQuestion() {
+        if (currentQuestionIndex > 0) {
+          displayQuestion(currentQuestionIndex - 1);
+        }
+      }
+
+      // Show error message
+      function showError(message) {
+        document.getElementById(
+          "status"
+        ).innerHTML = `<div class="error">❌ ${message}</div>`;
+      }
+
+      // Initialize when page loads
+      document.addEventListener("DOMContentLoaded", loadQuestions);
+    </script>
+  </body>
+</html>

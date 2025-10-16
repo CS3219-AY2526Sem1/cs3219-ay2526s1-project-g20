@@ -1,0 +1,350 @@
+[
+  {
+    "title": "Two Sum",
+    "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.",
+    "categories": ["Arrays", "Algorithms"],
+    "difficulty": "Easy",
+    "link": "https://leetcode.com/problems/two-sum/",
+    "examples": [
+      {
+        "input": "nums = [2,7,11,15], target = 9",
+        "output": "[0,1]",
+        "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."
+      },
+      {
+        "input": "nums = [3,2,4], target = 6",
+        "output": "[1,2]"
+      }
+    ],
+    "constraints": [
+      "2 <= nums.length <= 10^4",
+      "-10^9 <= nums[i] <= 10^9",
+      "-10^9 <= target <= 10^9",
+      "Only one valid answer exists"
+    ],
+    "hints": [
+      "A brute force solution would be to iterate through each element x and find if there is another value that equals to target - x.",
+      "Use a hash map to store the numbers you've seen so far and their indices.",
+      "For each number, check if target - number exists in the hash map."
+    ]
+  },
+  {
+    "title": "Binary Search",
+    "description": "Given an array of integers nums which is sorted in ascending order, and an integer target, write a function to search target in nums. If target exists, then return its index. Otherwise, return -1. You must write an algorithm with O(log n) runtime complexity.",
+    "categories": ["Algorithms", "Searching", "Arrays"],
+    "difficulty": "Easy",
+    "link": "https://leetcode.com/problems/binary-search/",
+    "examples": [
+      {
+        "input": "nums = [-1,0,3,5,9,12], target = 9",
+        "output": "4",
+        "explanation": "9 exists in nums and its index is 4"
+      },
+      {
+        "input": "nums = [-1,0,3,5,9,12], target = 2",
+        "output": "-1",
+        "explanation": "2 does not exist in nums so return -1"
+      }
+    ],
+    "constraints": [
+      "1 <= nums.length <= 10^4",
+      "-10^4 < nums[i], target < 10^4",
+      "All the integers in nums are unique",
+      "nums is sorted in ascending order"
+    ],
+    "hints": [
+      "Use two pointers: left and right to track the search range",
+      "Compare the middle element with the target",
+      "Eliminate half of the search space in each iteration"
+    ]
+  },
+  {
+    "title": "Reverse Linked List",
+    "description": "Given the head of a singly linked list, reverse the list, and return the reversed list.",
+    "categories": ["Data Structures", "Algorithms"],
+    "difficulty": "Easy",
+    "link": "https://leetcode.com/problems/reverse-linked-list/",
+    "examples": [
+      {
+        "input": "head = [1,2,3,4,5]",
+        "output": "[5,4,3,2,1]"
+      },
+      {
+        "input": "head = [1,2]",
+        "output": "[2,1]"
+      },
+      {
+        "input": "head = []",
+        "output": "[]"
+      }
+    ],
+    "constraints": [
+      "The number of nodes in the list is the range [0, 5000]",
+      "-5000 <= Node.val <= 5000"
+    ],
+    "hints": [
+      "Use three pointers: previous, current, and next",
+      "Iterate through the list and reverse the pointers",
+      "Can you solve it both iteratively and recursively?"
+    ]
+  },
+  {
+    "title": "Valid Parentheses",
+    "description": "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid. An input string is valid if: Open brackets must be closed by the same type of brackets. Open brackets must be closed in the correct order. Every close bracket has a corresponding open bracket of the same type.",
+    "categories": ["Strings", "Data Structures"],
+    "difficulty": "Easy",
+    "link": "https://leetcode.com/problems/valid-parentheses/",
+    "examples": [
+      {
+        "input": "s = \"()\"",
+        "output": "true"
+      },
+      {
+        "input": "s = \"()[]{}\"",
+        "output": "true"
+      },
+      {
+        "input": "s = \"(]\"",
+        "output": "false"
+      }
+    ],
+    "constraints": [
+      "1 <= s.length <= 10^4",
+      "s consists of parentheses only '()[]{}'."
+    ],
+    "hints": [
+      "Use a stack data structure",
+      "Push opening brackets onto the stack",
+      "When you encounter a closing bracket, check if it matches the top of the stack"
+    ]
+  },
+  {
+    "title": "Merge Two Sorted Lists",
+    "description": "You are given the heads of two sorted linked lists list1 and list2. Merge the two lists into one sorted list. The list should be made by splicing together the nodes of the first two lists. Return the head of the merged linked list.",
+    "categories": ["Data Structures", "Algorithms", "Sorting"],
+    "difficulty": "Easy",
+    "link": "https://leetcode.com/problems/merge-two-sorted-lists/",
+    "examples": [
+      {
+        "input": "list1 = [1,2,4], list2 = [1,3,4]",
+        "output": "[1,1,2,3,4,4]"
+      },
+      {
+        "input": "list1 = [], list2 = []",
+        "output": "[]"
+      },
+      {
+        "input": "list1 = [], list2 = [0]",
+        "output": "[0]"
+      }
+    ],
+    "constraints": [
+      "The number of nodes in both lists is in the range [0, 50]",
+      "-100 <= Node.val <= 100",
+      "Both list1 and list2 are sorted in non-decreasing order"
+    ],
+    "hints": [
+      "Use a dummy node to simplify the merge process",
+      "Compare the values of the two lists and attach the smaller one",
+      "Can you solve it recursively?"
+    ]
+  },
+  {
+    "title": "Longest Substring Without Repeating Characters",
+    "description": "Given a string s, find the length of the longest substring without repeating characters.",
+    "categories": ["Strings", "Algorithms"],
+    "difficulty": "Medium",
+    "link": "https://leetcode.com/problems/longest-substring-without-repeating-characters/",
+    "examples": [
+      {
+        "input": "s = \"abcabcbb\"",
+        "output": "3",
+        "explanation": "The answer is \"abc\", with the length of 3."
+      },
+      {
+        "input": "s = \"bbbbb\"",
+        "output": "1",
+        "explanation": "The answer is \"b\", with the length of 1."
+      },
+      {
+        "input": "s = \"pwwkew\"",
+        "output": "3",
+        "explanation": "The answer is \"wke\", with the length of 3."
+      }
+    ],
+    "constraints": [
+      "0 <= s.length <= 5 * 10^4",
+      "s consists of English letters, digits, symbols and spaces"
+    ],
+    "hints": [
+      "Use the sliding window technique",
+      "Use a hash map to store characters and their indices",
+      "Move the left pointer when you find a duplicate"
+    ]
+  },
+  {
+    "title": "Add Two Numbers",
+    "description": "You are given two non-empty linked lists representing two non-negative integers. The digits are stored in reverse order, and each of their nodes contains a single digit. Add the two numbers and return the sum as a linked list.",
+    "categories": ["Data Structures", "Math", "Algorithms"],
+    "difficulty": "Medium",
+    "link": "https://leetcode.com/problems/add-two-numbers/",
+    "examples": [
+      {
+        "input": "l1 = [2,4,3], l2 = [5,6,4]",
+        "output": "[7,0,8]",
+        "explanation": "342 + 465 = 807"
+      },
+      {
+        "input": "l1 = [0], l2 = [0]",
+        "output": "[0]"
+      }
+    ],
+    "constraints": [
+      "The number of nodes in each linked list is in the range [1, 100]",
+      "0 <= Node.val <= 9",
+      "It is guaranteed that the list represents a number that does not have leading zeros"
+    ],
+    "hints": [
+      "Keep track of the carry using a variable",
+      "Handle different list lengths carefully",
+      "Don't forget to add a final node if there's a carry at the end"
+    ]
+  },
+  {
+    "title": "Container With Most Water",
+    "description": "You are given an integer array height of length n. There are n vertical lines drawn such that the two endpoints of the ith line are (i, 0) and (i, height[i]). Find two lines that together with the x-axis form a container, such that the container contains the most water. Return the maximum amount of water a container can store.",
+    "categories": ["Arrays", "Greedy", "Algorithms"],
+    "difficulty": "Medium",
+    "link": "https://leetcode.com/problems/container-with-most-water/",
+    "examples": [
+      {
+        "input": "height = [1,8,6,2,5,4,8,3,7]",
+        "output": "49",
+        "explanation": "The max area is between index 1 and 8 with height 7 and width 7."
+      }
+    ],
+    "constraints": [
+      "n == height.length",
+      "2 <= n <= 10^5",
+      "0 <= height[i] <= 10^4"
+    ],
+    "hints": [
+      "Use two pointers approach starting from both ends",
+      "The area is limited by the shorter line",
+      "Move the pointer with the shorter height inward"
+    ]
+  },
+  {
+    "title": "Climbing Stairs",
+    "description": "You are climbing a staircase. It takes n steps to reach the top. Each time you can either climb 1 or 2 steps. In how many distinct ways can you climb to the top?",
+    "categories": ["Dynamic Programming", "Math", "Algorithms"],
+    "difficulty": "Easy",
+    "link": "https://leetcode.com/problems/climbing-stairs/",
+    "examples": [
+      {
+        "input": "n = 2",
+        "output": "2",
+        "explanation": "There are two ways: 1+1 or 2"
+      },
+      {
+        "input": "n = 3",
+        "output": "3",
+        "explanation": "There are three ways: 1+1+1, 1+2, or 2+1"
+      }
+    ],
+    "constraints": ["1 <= n <= 45"],
+    "hints": [
+      "This is a Fibonacci sequence problem",
+      "The number of ways to reach step n is the sum of ways to reach step n-1 and n-2",
+      "Can you optimize space complexity?"
+    ]
+  },
+  {
+    "title": "Maximum Subarray",
+    "description": "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
+    "categories": ["Arrays", "Dynamic Programming", "Algorithms"],
+    "difficulty": "Medium",
+    "link": "https://leetcode.com/problems/maximum-subarray/",
+    "examples": [
+      {
+        "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+        "output": "6",
+        "explanation": "The subarray [4,-1,2,1] has the largest sum 6"
+      },
+      {
+        "input": "nums = [1]",
+        "output": "1"
+      },
+      {
+        "input": "nums = [5,4,-1,7,8]",
+        "output": "23"
+      }
+    ],
+    "constraints": ["1 <= nums.length <= 10^5", "-10^4 <= nums[i] <= 10^4"],
+    "hints": [
+      "Use Kadane's algorithm",
+      "Keep track of the current sum and maximum sum",
+      "Reset current sum to 0 if it becomes negative"
+    ]
+  },
+  {
+    "title": "Merge K Sorted Lists",
+    "description": "You are given an array of k linked-lists lists, each linked-list is sorted in ascending order. Merge all the linked-lists into one sorted linked-list and return it.",
+    "categories": ["Data Structures", "Algorithms", "Sorting"],
+    "difficulty": "Hard",
+    "link": "https://leetcode.com/problems/merge-k-sorted-lists/",
+    "examples": [
+      {
+        "input": "lists = [[1,4,5],[1,3,4],[2,6]]",
+        "output": "[1,1,2,3,4,4,5,6]"
+      },
+      {
+        "input": "lists = []",
+        "output": "[]"
+      },
+      {
+        "input": "lists = [[]]",
+        "output": "[]"
+      }
+    ],
+    "constraints": [
+      "k == lists.length",
+      "0 <= k <= 10^4",
+      "0 <= lists[i].length <= 500",
+      "-10^4 <= lists[i][j] <= 10^4"
+    ],
+    "hints": [
+      "Use a min heap (priority queue) to keep track of the smallest elements",
+      "Can you use divide and conquer?",
+      "Compare k elements k times is not efficient"
+    ]
+  },
+  {
+    "title": "Trapping Rain Water",
+    "description": "Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.",
+    "categories": ["Arrays", "Dynamic Programming", "Algorithms"],
+    "difficulty": "Hard",
+    "link": "https://leetcode.com/problems/trapping-rain-water/",
+    "examples": [
+      {
+        "input": "height = [0,1,0,2,1,0,1,3,2,1,2,1]",
+        "output": "6",
+        "explanation": "The above elevation map (black section) is represented by array [0,1,0,2,1,0,1,3,2,1,2,1]. In this case, 6 units of rain water (blue section) are being trapped."
+      },
+      {
+        "input": "height = [4,2,0,3,2,5]",
+        "output": "9"
+      }
+    ],
+    "constraints": [
+      "n == height.length",
+      "1 <= n <= 2 * 10^4",
+      "0 <= height[i] <= 10^5"
+    ],
+    "hints": [
+      "For each position, the water level is determined by the minimum of the maximum heights on both sides",
+      "Use dynamic programming to precompute the maximum heights",
+      "Can you solve it with two pointers?"
+    ]
+  }
+]
