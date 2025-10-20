@@ -119,7 +119,7 @@ class UserService:
     # ---------------------------
 
     @staticmethod
-    async def update_username(users_collection, user_id: str, update_data: UsernameUpdate):
+    def update_username(users_collection, user_id: str, update_data: UsernameUpdate):
         # Move your existing update_user_username logic here
         if not update_data.new_username:
             raise HTTPException(status_code=400, detail="New username is required")
@@ -135,22 +135,22 @@ class UserService:
         return {"message": "Username updated successfully"}
 
     @staticmethod
-    async def update_password(users_collection, user_id: str, update_data: PasswordUpdate):
+    def update_password(users_collection, user_id: str, update_data: PasswordUpdate):
         # Move your existing update_user_password logic here
         # Include validation for current password matching
         user = users_collection.find_one({"_id": user_id})
 
-        if not user or user["password"] != update_data.current_password:  # Use proper hashing!
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if not verify_password(update_data.current_password, user["password"]):  # Use proper hashing!
             raise HTTPException(status_code=401, detail="Current password is incorrect")
         
         hashed_password = get_password_hash(update_data.new_password)
         
-        result = users_collection.update_one(
+        users_collection.update_one(
             {"_id": user_id},
             {"$set": {"password": hashed_password}}  # Hash the new password!
         )
-        
-        if result.modified_count == 0:
-            raise HTTPException(status_code=404, detail="User not found")
         
         return {"message": "Password updated successfully"}
