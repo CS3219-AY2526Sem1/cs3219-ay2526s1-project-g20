@@ -161,19 +161,36 @@ export async function retryRequest(userId, mode = 'same', bearerToken) {
   };
 }
 
-/**
- * Remove the user from all bucket lists (LREM userId from each Q:... list)
- * and clear the UB:<userId> set.
- */
-async function cleanupUserFromBuckets(userId) {
-  const setKey = userBucketsKey(userId);
-  const keys = await redis.smembers(setKey);
-  if (keys?.length) {
-    for (const k of keys) {
-      await redis.lrem(k, 0, String(userId));
-    }
+/** Safely remove a user from all bucket lists and cleanup tracking. */
+async function cleanupUserFromBuckets(username) {
+  const lockKey = `LOCK:cleanup:${username}`;
+  const got = await redis.set(lockKey, '1', 'NX', 'EX', 10);
+  if (got !== 'OK') {
+    // another cleanup in progress; skip
+    return;
   }
-  await redis.del(setKey);
+
+  try {
+    const setKey = userBucketsKey(username);
+    const keys = await redis.smembers(setKey);
+    if (keys?.length) {
+      const pipeline = redis.pipeline();
+      for (const k of keys) {
+        pipeline.lrem(k, 0, String(username));
+      }
+      pipeline.del(setKey);
+      await pipeline.exec();
+    }
+    // Mark user inactive if not already in session
+    const rKey = reqKey(username);
+    const r = await redis.hget(rKey, 'status');
+    if (r && !['SESSION_READY', 'PENDING_ACCEPT'].includes(r)) {
+      await redis.hset(rKey, { status: 'NONE' });
+      await redis.srem(ACTIVE_USERS, String(username));
+    }
+  } finally {
+    await redis.del(lockKey);
+  }
 }
 
 /** Read last criteria stored in R:<userId> (used for requeue/retry flows). */

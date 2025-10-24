@@ -71,6 +71,12 @@ When a user clicks **Find match**:
   - Expires queued requests that waited longer than `TTL_SECS` (NFR1.1).
   - Expires handshakes whose window ended (and requeues as per policy).
 
+### Cleanup and Safety
+- When a match forms, both users are removed from all buckets they joined (not just the matched one).
+- This prevents duplicate or “ghost” matches if they appear in multiple queues.
+- Cleanup uses a Redis lock (LOCK:cleanup:<userId>) to avoid race conditions when multiple servers process users simultaneously.
+- Removal happens before new requests are added, ensuring clean state and consistent matching fairness.
+
 ---
 
 ## What lives in Redis
@@ -206,12 +212,14 @@ or
 ```json
 { "error": "Pair not found" }
 ```
-
-> 🤝 **Collaboration Service Integration**  
-> - Once **both** users accept, the Matching Service automatically calls  
->   `createSession({ participants: [userA, userB] })` in the Collaboration Service.  
-> - The resulting `sessionId` is stored in Redis and visible via `/match/status`.  
-> - Collaboration Service can fetch session data using that ID:  
+> 🤝 Collaboration Service Integration
+> - Rooms are created on-demand when the first client joins the WebSocket.
+> - After both users accept, the Matching Service publishes a `sessionId` (room id) via `/match/status`.
+> - Each client opens a WebSocket to the Collaboration Service using that `sessionId`:
+>   `ws://<collab-host>:8084/ws?room=<sessionId>`.
+> - Authentication is via the user’s JWT (HS256 in dev, RS256 in prod). If configured with
+>   `AUTH_REQUIRE_ROOM_CLAIM=true`, the token must also include `"room": "<sessionId>"`.
+> - We do not parse `pairId` or `userId`; it is internal to Matching. Participants are inferred from each client’s JWT (`sub`).
 >   ```json
 >   {
 >     "status": "SESSION_READY",
