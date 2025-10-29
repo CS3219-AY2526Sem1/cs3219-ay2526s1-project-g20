@@ -60,3 +60,4 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
     return false;
   }
 };
+

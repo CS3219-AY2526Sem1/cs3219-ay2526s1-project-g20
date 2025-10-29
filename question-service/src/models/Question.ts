@@ -102,3 +102,4 @@ QuestionSchema.index({ link: 1 }, { sparse: true });
 QuestionSchema.index({ title: 1 }, { unique: true });
 
 export default mongoose.model<IQuestionDocument>("Question", QuestionSchema);
+

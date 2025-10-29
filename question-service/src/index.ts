@@ -5,10 +5,11 @@ import dotenv from "dotenv";
 import compression from "compression";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { connectDatabase } from "./config/database";
+import { connectDatabase, checkDatabaseHealth } from "./config/database";
 import questionRoutes from "./routes/questionRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import { performanceMiddleware } from "./middleware/performance";
+import mongoose from "mongoose";
 
 // Load environment variables
 dotenv.config();
@@ -60,14 +61,36 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(performanceMiddleware);
 
 // Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Question service is running",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-  });
+app.get("/health", async (req, res) => {
+  try {
+    const dbHealthy = await checkDatabaseHealth();
+    let questionCount = 0;
+    if (dbHealthy && mongoose.connection.db) {
+      questionCount = await mongoose.connection.db
+        .collection("questions")
+        .countDocuments()
+        .catch(() => 0);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Question service is running",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      database: {
+        status: dbHealthy ? "connected" : "disconnected",
+        questionCount: questionCount,
+      },
+      version: "1.0.0",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Health check failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Metrics endpoint

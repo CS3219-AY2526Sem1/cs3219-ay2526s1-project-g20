@@ -1,0 +1,21 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+myenv/
+venv/
+.env  # Exclude local .env (use Docker secrets in production)
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dist artifacts
+dist/
+build/
+*.egg-info/

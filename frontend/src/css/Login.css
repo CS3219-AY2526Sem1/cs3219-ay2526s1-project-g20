@@ -1,0 +1,86 @@
+/* Container */
+.login-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 300px;
+}
+
+/* Segmented control */
+.segmented {
+  display: flex;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ccc;
+}
+
+.segmented button {
+  flex: 1;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.segmented button:hover {
+  background: #eaeaea;
+}
+
+/* Active button style — visible and contrasting */
+.segmented button.is-active {
+  background: #333;
+  color: #333;
+}
+
+/* Labels & Inputs */
+.label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: #333;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #333;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Submit button */
+.btn {
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn--dark {
+  background: #333;
+  color: white;
+  border: none;
+}
+
+.btn--dark:hover {
+  background: #555;
+  transform: scale(1.02);
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 4px;
+}

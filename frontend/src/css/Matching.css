@@ -1,0 +1,59 @@
+.matching {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.match-card {
+  max-width: 680px;
+  margin-top: 1rem;
+}
+
+.segmented {
+  display: flex;
+  background: var(--bg-muted, #f3f4f6);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.segmented button {
+  flex: 1;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted, #555);
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.segmented button:hover {
+  background: var(--hover-bg, #e5e7eb);
+}
+
+.segmented .is-active {
+  background: var(--accent, #2563eb);
+  color: white;
+}
+
+.select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.msg-box {
+  background: var(--bg-muted, #f3f4f6);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-style: italic;
+}

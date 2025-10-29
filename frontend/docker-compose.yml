@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    # live editing: map your folder into the container
+    volumes:
+      - .:/app
+      - /app/node_modules   # keep node_modules inside container
+    environment:
+      - NODE_ENV=development

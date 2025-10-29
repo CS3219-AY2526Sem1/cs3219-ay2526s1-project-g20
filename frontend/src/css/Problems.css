@@ -1,0 +1,207 @@
+.problems-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/***************************************************
+ * FILTER BAR
+ ***************************************************/
+.filter-card {
+  margin-bottom: 16px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.filter-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-col .meta {
+  margin-bottom: 4px;
+}
+
+.clear-btn {
+  align-self: flex-end;
+}
+
+/***************************************************
+ * INPUTS
+ ***************************************************/
+.input,
+.select {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  min-width: 140px;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #888;
+}
+
+/***************************************************
+ * TABLE LAYOUT
+ ***************************************************/
+.problems-table .table-header {
+  display: flex;
+  gap: 12px;
+  padding: 0 4px 8px;
+  font-weight: 500;
+  color: #666;
+}
+
+.problem-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.problem-row:last-child {
+  border-bottom: none;
+}
+
+/* Column widths */
+.col-id {
+  width: 24px;
+}
+
+.col-title {
+  flex: 1;
+}
+
+.col-topic {
+  width: 96px;
+}
+
+.col-diff {
+  width: 80px;
+}
+
+.col-status {
+  width: 110px;
+  text-align: right;
+}
+
+/***************************************************
+ * TITLE & BADGES
+ ***************************************************/
+.problem-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/***************************************************
+ * BADGES
+ ***************************************************/
+.badge {
+  background: #f3f4f6;
+  color: #333;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.badge--dark {
+  background: #333;
+  color: white;
+}
+
+.badge--red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/***************************************************
+ * RESPONSIVE DESIGN
+ ***************************************************/
+@media (max-width: 640px) {
+  .problems-table .table-header {
+    display: none;
+  }
+
+  .problem-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .col-id,
+  .col-topic,
+  .col-diff,
+  .col-status {
+    width: auto;
+    text-align: left;
+  }
+
+  .col-status {
+    margin-top: 4px;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .input,
+  .select,
+  .btn {
+    width: 100%;
+  }
+}
+
+/***************************************************
+ * DARK MODE
+ ***************************************************/
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: #1e1e1e;
+    border-color: #333;
+  }
+
+  .meta {
+    color: #aaa;
+  }
+
+  .input,
+  .select {
+    background: #2b2b2b;
+    color: #eee;
+    border-color: #444;
+  }
+
+  .input:focus,
+  .select:focus {
+    border-color: #888;
+  }
+
+  .badge {
+    background: #333;
+    color: #ddd;
+  }
+
+  .badge--dark {
+    background: #fff;
+    color: #000;
+  }
+
+  .badge--red {
+    background: #3b1c1c;
+    color: #ff6b6b;
+  }
+
+  .problem-row {
+    border-bottom-color: #333;
+  }
+}
