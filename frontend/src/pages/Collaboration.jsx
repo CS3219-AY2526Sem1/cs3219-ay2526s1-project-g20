@@ -6,6 +6,7 @@ import { initVimMode } from "monaco-vim";
 import { endpoints } from "../lib/api";
 import "../css/CodeEditor.css";
 import PeerLeftModal from "../components/PeerLeftModal.jsx";
+import LanguageRecommendModal from "../components/LanguageRecommendModal.jsx";
 
 
 /**
@@ -27,6 +28,7 @@ export default function Collaboration() {
   const [vimMode, setVimMode] = useState(false);
   const [isReadonly, setIsReadonly] = useState(false);
   const [peerLeftOpen, setPeerLeftOpen] = useState(false);
+  const [showLangReco, setShowLangReco] = useState(false);
 
   // Question & run/test state
   const [question, setQuestion] = useState(state?.question ?? null);
@@ -55,6 +57,12 @@ export default function Collaboration() {
   const vimRef = useRef(null);
   const suppressNetworkRef = useRef(false);
   const syncedRef = useRef(false);
+  const recoShownRef = useRef(false);
+
+  const langRecoKey = useMemo(
+    () => `lang-reco-shown:${state?.roomId || sessionId || "unknown"}`,
+    [state?.roomId, sessionId]
+  );
 
   // base64 helpers
   const toB64 = (u8) => btoa(String.fromCharCode(...u8));
@@ -94,6 +102,10 @@ export default function Collaboration() {
       setStatus("connected");
       ws.send(JSON.stringify({ type: "JOIN_ROOM", roomId: state.roomId }));
       joinedRef.current = true;
+      if (!recoShownRef.current && !sessionStorage.getItem(langRecoKey)) {
+        recoShownRef.current = true;
+        setShowLangReco(true);
+      }
     };
 
     ws.onmessage = (evt) => {
@@ -896,6 +908,16 @@ int main() {
         onContinue={() => setPeerLeftOpen(false)}
         onExit={quitSession}
         onClose={() => setPeerLeftOpen(false)}
+      />
+
+      <LanguageRecommendModal
+        open={showLangReco}
+        onClose={() => setShowLangReco(false)}
+        onOk={() => {
+          sessionStorage.setItem(langRecoKey, "1");
+          setShowLangReco(false);
+          setTimeout(() => window.location.reload(), 50);
+        }}
       />
     </div>
   );
