@@ -36,6 +36,24 @@ const QuestionSchema: Schema = new Schema(
       type: String,
       trim: true,
     },
+    images: [
+      {
+        url: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        alt: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        caption: {
+          type: String,
+          trim: true,
+        },
+      },
+    ],
     examples: [
       {
         input: {
@@ -84,3 +102,4 @@ QuestionSchema.index({ link: 1 }, { sparse: true });
 QuestionSchema.index({ title: 1 }, { unique: true });
 
 export default mongoose.model<IQuestionDocument>("Question", QuestionSchema);
+

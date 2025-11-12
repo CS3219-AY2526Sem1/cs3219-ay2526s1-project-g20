@@ -69,4 +69,11 @@ router.delete(
   questionController.deleteQuestion.bind(questionController)
 );
 
+// Code execution route
+router.post(
+  "/execute",
+  questionController.executeCode.bind(questionController)
+);
+
 export default router;
+

@@ -30,6 +30,11 @@ export interface IQuestion {
   categories: Category[];
   difficulty: Difficulty;
   link?: string;
+  images?: {
+    url: string;
+    alt: string;
+    caption?: string;
+  }[];
   examples?: {
     input: string;
     output: string;
@@ -55,3 +60,4 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
 }
+

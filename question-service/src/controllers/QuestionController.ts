@@ -8,6 +8,7 @@ import {
 } from "../types";
 import { getPerformanceMetrics } from "../middleware/performance";
 import aiService from "../services/aiService";
+import codeExecutionService from "../services/codeExecutionService";
 
 // Simple in-memory cache for frequently accessed data
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -355,11 +356,10 @@ export class QuestionController {
         return;
       }
 
-      const [total, byDifficulty, byCategory] = await Promise.all([
+      const [total, byDifficultyRaw, byCategory] = await Promise.all([
         Question.countDocuments(),
         Question.aggregate([
           { $group: { _id: "$difficulty", count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
         ]),
         Question.aggregate([
           { $unwind: "$categories" },
@@ -367,6 +367,16 @@ export class QuestionController {
           { $sort: { count: -1 } },
         ]),
       ]);
+
+      const difficultyOrder = ["Easy", "Medium", "Hard"];
+      const byDifficulty = byDifficultyRaw.sort((a, b) => {
+        const ai = difficultyOrder.indexOf(String(a._id));
+        const bi = difficultyOrder.indexOf(String(b._id));
+        if (ai === -1 && bi === -1) return String(a._id).localeCompare(String(b._id));
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
 
       const stats = {
         total,
@@ -559,6 +569,46 @@ export class QuestionController {
       res.status(500).json({
         success: false,
         message: "Failed to clear AI service cache",
+      });
+    }
+  }
+
+  // Execute code with test cases
+  async executeCode(req: Request, res: Response): Promise<void> {
+    try {
+      const { code, language, testCases } = req.body;
+
+      if (!code || !language) {
+        res.status(400).json({
+          success: false,
+          message: "Code and language are required",
+        });
+        return;
+      }
+
+      if (!testCases || !Array.isArray(testCases) || testCases.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "Test cases array is required",
+        });
+        return;
+      }
+
+      const result = await codeExecutionService.executeCode(
+        code,
+        language,
+        testCases
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      console.error("Error executing code:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to execute code",
       });
     }
   }

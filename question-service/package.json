@@ -13,7 +13,13 @@
     "test:db": "jest src/tests/simple.test.ts",
     "test:api": "jest src/tests/api.test.ts",
     "seed": "ts-node src/scripts/seedDatabase.ts",
+    "seed:prod": "node dist/scripts/seedDatabase.js",
     "seed-leetcode": "ts-node src/scripts/seedLeetCodeQuestions.ts",
+    "seed-leetcode:prod": "node dist/scripts/seedLeetCodeQuestions.js",
+    "add-questions": "ts-node src/scripts/addQuestions.ts",
+    "add-questions:prod": "node dist/scripts/addQuestions.js",
+    "add-test-cases": "ts-node src/scripts/addTestCasesToQuestions.ts",
+    "add-test-cases:prod": "node dist/scripts/addTestCasesToQuestions.js",
     "test:all": "npm run test:db && npm run test:api"
   },
   "keywords": [

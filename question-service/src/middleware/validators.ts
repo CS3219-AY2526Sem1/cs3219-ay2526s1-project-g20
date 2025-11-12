@@ -35,6 +35,25 @@ export const validateQuestion = [
     .isURL()
     .withMessage("Link must be a valid URL"),
 
+  body("images").optional().isArray().withMessage("Images must be an array"),
+
+  body("images.*.url")
+    .optional()
+    .isURL()
+    .withMessage("Image URL must be a valid URL"),
+
+  body("images.*.alt")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Image alt text is required"),
+
+  body("images.*.caption")
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage("Image caption must be at most 200 characters"),
+
   body("examples")
     .optional()
     .isArray()
@@ -101,3 +120,4 @@ export const handleValidationErrors = (
 
   next();
 };
+

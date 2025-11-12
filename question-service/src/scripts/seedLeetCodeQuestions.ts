@@ -10,6 +10,14 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.ARRAYS, Category.DATA_STRUCTURES],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/two-sum/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/two-sum.png",
+        alt: "Two Sum problem visualization showing array [2,7,11,15] with target 9",
+        caption:
+          "Visual representation of the Two Sum problem with array elements and target value",
+      },
+    ],
     examples: [
       {
         input: "nums = [2,7,11,15], target = 9",
@@ -60,6 +68,14 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.ARRAYS, Category.DYNAMIC_PROGRAMMING],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/best-time-to-buy-and-sell-stock.png",
+        alt: "Stock price chart showing daily prices and optimal buy/sell points",
+        caption:
+          "Stock price visualization showing the optimal buying and selling strategy",
+      },
+    ],
     examples: [
       {
         input: "prices = [7,1,5,3,6,4]",
@@ -98,6 +114,13 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.STRINGS, Category.DATA_STRUCTURES],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/valid-parentheses/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/valid-parentheses.png",
+        alt: "Stack-based approach visualization for valid parentheses problem",
+        caption: "Stack data structure approach for matching parentheses",
+      },
+    ],
     examples: [
       {
         input: 's = "()"',
@@ -150,6 +173,13 @@ const leetCodeQuestions: IQuestion[] = [
     ],
     difficulty: Difficulty.MEDIUM,
     link: "https://leetcode.com/problems/maximum-subarray/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/maximum-subarray.png",
+        alt: "Kadane's algorithm visualization showing subarray with maximum sum",
+        caption: "Kadane's algorithm approach for finding maximum subarray sum",
+      },
+    ],
     examples: [
       {
         input: "nums = [-2,1,-3,4,-1,2,1,-5,4]",
@@ -199,6 +229,13 @@ const leetCodeQuestions: IQuestion[] = [
     ],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/climbing-stairs/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/climbing-stairs.png",
+        alt: "Staircase visualization showing different ways to climb stairs",
+        caption: "Fibonacci sequence approach for climbing stairs problem",
+      },
+    ],
     examples: [
       {
         input: "n = 2",
@@ -246,6 +283,13 @@ const leetCodeQuestions: IQuestion[] = [
     ],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/binary-tree-inorder-traversal/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/binary-tree-inorder-traversal.png",
+        alt: "Binary tree with inorder traversal path highlighted",
+        caption: "Inorder traversal: left -> root -> right",
+      },
+    ],
     examples: [
       {
         input: "root = [1,null,2,3]",
@@ -294,6 +338,13 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.TREES, Category.SEARCHING, Category.ALGORITHMS],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/symmetric-tree/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/symmetric-tree.png",
+        alt: "Symmetric binary tree visualization showing mirror structure",
+        caption: "Symmetric tree structure with mirror reflection",
+      },
+    ],
     examples: [
       {
         input: "root = [1,2,2,3,4,4,3]",
@@ -333,6 +384,13 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.TREES, Category.SEARCHING, Category.ALGORITHMS],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/maximum-depth-of-binary-tree/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/maximum-depth-of-binary-tree.png",
+        alt: "Binary tree with depth levels highlighted",
+        caption: "Maximum depth calculation using DFS approach",
+      },
+    ],
     examples: [
       {
         input: "root = [3,9,20,null,null,15,7]",
@@ -372,6 +430,13 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.ARRAYS, Category.ALGORITHMS, Category.TREES],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/convert-sorted-array-to-binary-search-tree/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/convert-sorted-array-to-binary-search-tree.png",
+        alt: "Sorted array conversion to height-balanced BST",
+        caption: "Divide and conquer approach for creating balanced BST",
+      },
+    ],
     examples: [
       {
         input: "nums = [-10,-3,0,5,9]",
@@ -413,6 +478,13 @@ const leetCodeQuestions: IQuestion[] = [
     categories: [Category.TREES, Category.SEARCHING, Category.ALGORITHMS],
     difficulty: Difficulty.EASY,
     link: "https://leetcode.com/problems/path-sum/",
+    images: [
+      {
+        url: "https://assets.leetcode.com/uploads/2020/09/14/path-sum.png",
+        alt: "Binary tree with path sum visualization",
+        caption: "DFS approach for finding root-to-leaf path with target sum",
+      },
+    ],
     examples: [
       {
         input:

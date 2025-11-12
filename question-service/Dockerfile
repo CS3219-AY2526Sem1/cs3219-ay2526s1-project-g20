@@ -8,11 +8,12 @@ WORKDIR /app
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci && npm cache clean --force
 
-# Copy source code
+# Copy source code and sample data
 COPY src/ ./src/
+COPY sample-questions.json ./
 
 # Build the application
 RUN npm run build
@@ -20,8 +21,8 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init and Python for code execution
+RUN apk add --no-cache dumb-init python3 py3-pip
 
 # Create app user for security
 RUN addgroup -g 1001 -S nodejs && \
@@ -30,10 +31,15 @@ RUN addgroup -g 1001 -S nodejs && \
 # Set working directory
 WORKDIR /app
 
-# Copy built application and dependencies from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+# Copy package files and install only production dependencies
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+
+# Copy sample questions file for seeding (if needed)
+COPY --from=builder --chown=nodejs:nodejs /app/sample-questions.json ./sample-questions.json
 
 # Switch to non-root user
 USER nodejs
