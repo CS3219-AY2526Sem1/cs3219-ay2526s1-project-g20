@@ -1,4 +1,5 @@
-## PeerPrep Monorepo Guide
+# CS3219 Project (PeerPrep) - AY2526S1
+## Group: G20
 
 This document replaces the original course boilerplate and explains how to start, verify, and understand the PeerPrep microservices system.
 
