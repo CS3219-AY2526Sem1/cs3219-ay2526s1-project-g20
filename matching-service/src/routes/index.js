@@ -78,7 +78,7 @@ r.post('/decline', async (req, res) => {
 
 r.post('/retry', async (req, res) => {
   try {
-    const { mode } = req.body || {};
+    const { mode = 'same' } = req.body || {};
     const bearer = req.headers.authorization;
     const out = await retryRequest(req.user.id, mode, bearer);
     return res.json(out);

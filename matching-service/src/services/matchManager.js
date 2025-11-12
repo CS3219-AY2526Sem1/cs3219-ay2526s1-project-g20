@@ -36,14 +36,38 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 const TTL = Number(process.env.TTL_SECS || 120);
 const SWEEP = Number(process.env.SWEEPER_INTERVAL_SECS || 5);
 const ACCEPT_WIN = Number(process.env.ACCEPT_WINDOW_SECS || 25);
-const FALLBACK_DIFFS = ['Easy', 'Medium', 'Hard'];
+const DIFF_ORDER = ['Easy', 'Medium', 'Hard'];
+const FALLBACK_DIFFS = [...DIFF_ORDER];
 const FALLBACK_TOPICS = ["Algorithms", "Arrays", "Data Structures", "Strings", "Graphs"];
+
+function orderedDifficulties(raw = []) {
+  const sanitized = Array.isArray(raw) ? raw.map(x => (x || '').trim()).filter(Boolean) : [];
+  const seen = new Set();
+  const ordered = [];
+
+  for (const diff of DIFF_ORDER) {
+    if (sanitized.includes(diff) && !seen.has(diff)) {
+      seen.add(diff);
+      ordered.push(diff);
+    }
+  }
+
+  for (const diff of sanitized) {
+    if (!seen.has(diff)) {
+      seen.add(diff);
+      ordered.push(diff);
+    }
+  }
+
+  if (!ordered.length) return [...FALLBACK_DIFFS];
+  return ordered;
+}
 
 // Allowable topics and difficulties
 async function getCanonicalLists(bearerToken) {
   try {
     const { difficulties, topics } = await getQuestionMeta(bearerToken);
-    const DIFFS = Array.isArray(difficulties) && difficulties.length ? difficulties : FALLBACK_DIFFS;
+    const DIFFS = orderedDifficulties(difficulties);
     const ALL_TOPICS = Array.isArray(topics) && topics.length ? topics : FALLBACK_TOPICS;
     return { DIFFS, ALL_TOPICS };
   } catch (err) {
@@ -96,7 +120,20 @@ function buildBuckets({ difficulty, topics }, DIFFS, ALL_TOPICS) {
  * Also store their criteria & timestamps in R:<userId>, and track them in ACTIVE_USERS.
  */
 async function enqueueByCriteria(userId, { difficulty, topics }, seniorityTs, DIFFS, ALL_TOPICS) {
-  const keys = buildBuckets({ difficulty, topics }, DIFFS, ALL_TOPICS);
+  const diffList = Array.isArray(difficulty)
+    ? difficulty.filter(Boolean)
+    : (difficulty ? [difficulty] : []);
+  const uniqueDiffs = Array.from(new Set(diffList));
+  const appliedDiffs = uniqueDiffs.length ? uniqueDiffs : (difficulty ? [difficulty] : []);
+
+  let keys = [];
+  if (!appliedDiffs.length) {
+    keys = buildBuckets({ difficulty: null, topics }, DIFFS, ALL_TOPICS);
+  } else {
+    for (const diff of appliedDiffs) {
+      keys.push(...buildBuckets({ difficulty: diff, topics }, DIFFS, ALL_TOPICS));
+    }
+  }
   for (const k of keys) {
     await redis.rpush(k, String(userId));
   }
@@ -108,12 +145,13 @@ async function enqueueByCriteria(userId, { difficulty, topics }, seniorityTs, DI
       status: 'QUEUED',
       createdAt: queueTs,
       seniorityTs,
-      difficulty: difficulty || '',
+      difficulty: appliedDiffs.length ? JSON.stringify(appliedDiffs) : '',
       topics: JSON.stringify(topics || [])
     })
     .hdel(reqKey(userId), 'pairId', 'expiresAt', 'sessionId', 'lastEvent')
     .exec();
   console.log(`Setting status QUEUED for user ${userId}`);
+  console.log(`Buckets for ${userId}:`, keys);
   await redis.sadd(ACTIVE_USERS, String(userId));
   return keys;
 }
@@ -125,11 +163,18 @@ async function enqueueByCriteria(userId, { difficulty, topics }, seniorityTs, DI
 async function requeueFromStoredCriteria(userId, bearerToken) {
   const r = await redis.hgetall(reqKey(userId));
   const seniorityTs = Number(r?.seniorityTs || Date.now());
-  const { difficulty, topics } = await getStoredCriteria(userId);
+  const { diffList, difficulty, topics } = await getStoredCriteria(userId);
 
   const { DIFFS, ALL_TOPICS } = await getCanonicalLists(bearerToken);
 
-  const keys = await enqueueByCriteria(userId, { difficulty, topics }, seniorityTs, DIFFS, ALL_TOPICS);
+  const criteriaDifficulty = diffList.length ? diffList : (difficulty ? [difficulty] : []);
+  const keys = await enqueueByCriteria(
+    userId,
+    { difficulty: criteriaDifficulty, topics },
+    seniorityTs,
+    DIFFS,
+    ALL_TOPICS
+  );
   await tryMatch(userId, keys);
 }
 
@@ -139,22 +184,43 @@ async function requeueFromStoredCriteria(userId, bearerToken) {
  * - mode === 'broaden': relax difficulties by +-1
  **/
 export async function retryRequest(userId, mode = 'same', bearerToken) {
-  if (mode && mode !== 'same') {
-    console.warn(`retryRequest only supports mode="same" (got ${mode}) – falling back to same criteria.`);
-  }
-
   const r = await redis.hgetall(reqKey(userId));
   if (!r || !r.status) return { error: 'No request' };
 
   await cleanupUserFromBuckets(userId);
 
-  const { difficulty, topics } = await getStoredCriteria(userId);
+  const { difficulty, diffList, topics } = await getStoredCriteria(userId);
   const seniorityTs = Number(r.seniorityTs) || Date.now();
 
   const { DIFFS, ALL_TOPICS } = await getCanonicalLists(bearerToken);
-  const keys = await enqueueByCriteria(userId, { difficulty, topics }, seniorityTs, DIFFS, ALL_TOPICS);
+
+  let nextDiffs = diffList.length ? [...diffList] : (difficulty ? [difficulty] : []);
+  if (mode === 'broaden') {
+    const relaxed = findRelaxCandidate(nextDiffs, DIFFS);
+    if (!relaxed) {
+      return { error: 'No adjacent difficulty available to relax' };
+    }
+    nextDiffs.push(relaxed);
+    const keys = await enqueueByCriteria(
+      userId,
+      { difficulty: nextDiffs, topics },
+      seniorityTs,
+      DIFFS,
+      ALL_TOPICS
+    );
+    await tryMatch(userId, keys);
+    return { ok: true, mode: 'broaden', applied: { difficulty: relaxed } };
+  }
+
+  const keys = await enqueueByCriteria(
+    userId,
+    { difficulty: nextDiffs, topics },
+    seniorityTs,
+    DIFFS,
+    ALL_TOPICS
+  );
   await tryMatch(userId, keys);
-  return { ok: true };
+  return { ok: true, mode: 'same' };
 }
 
 /** Safely remove a user from all bucket lists and cleanup tracking. */
@@ -192,12 +258,44 @@ async function cleanupUserFromBuckets(username) {
 /** Read last criteria stored in R:<userId> (used for requeue/retry flows). */
 async function getStoredCriteria(userId) {
   const r = await redis.hgetall(reqKey(userId));
-  const difficulty = r?.difficulty || '';
+  let difficultyField = r?.difficulty || '';
+  let diffList = [];
+  if (difficultyField) {
+    if (difficultyField.startsWith('[')) {
+      try {
+        diffList = JSON.parse(difficultyField).filter(Boolean);
+      } catch {
+        diffList = [];
+      }
+    } else {
+      diffList = [difficultyField];
+    }
+  }
+  const primaryDiff = diffList[0] || '';
   let topics = [];
   try { topics = JSON.parse(r?.topics || '[]'); } catch { topics = []; }
-  return { difficulty: difficulty || '', topics };
+  return { difficulty: primaryDiff, diffList, topics };
 }
 
+function adjacentDifficulties(diff, DIFFS) {
+  const idx = DIFFS.indexOf(diff);
+  if (idx < 0) return [];
+  const out = [];
+  if (idx - 1 >= 0) out.push(DIFFS[idx - 1]);
+  if (idx + 1 < DIFFS.length) out.push(DIFFS[idx + 1]);
+  return out;
+}
+
+function findRelaxCandidate(diffList, DIFFS) {
+  if (!diffList.length) return '';
+  const seen = new Set(diffList);
+  for (const base of diffList) {
+    const neighbors = adjacentDifficulties(base, DIFFS);
+    const candidate = neighbors.find(n => !seen.has(n));
+    if (candidate) return candidate;
+  }
+  return '';
+}
 
 // --------- Matching Core ---------
 
@@ -316,11 +414,21 @@ export async function acceptMatch(userId, pairId, bearerToken) {
 
   if (updated.aAccepted === '1' && updated.bAccepted === '1') {
     // Derive shared criteria
-    const aCrit = await getStoredCriteria(updated.u1); // { difficulty, topics }
+    const aCrit = await getStoredCriteria(updated.u1);
     const bCrit = await getStoredCriteria(updated.u2);
-    const difficulty =
-      (aCrit.difficulty && aCrit.difficulty === bCrit.difficulty) ? aCrit.difficulty :
-      (aCrit.difficulty || bCrit.difficulty || '');
+    const aDiffs = aCrit.diffList.length ? aCrit.diffList : (aCrit.difficulty ? [aCrit.difficulty] : []);
+    const bDiffs = bCrit.diffList.length ? bCrit.diffList : (bCrit.difficulty ? [bCrit.difficulty] : []);
+    const bSet = new Set(bDiffs);
+    let difficulty = '';
+    for (const diff of DIFF_ORDER) {
+      if (aDiffs.includes(diff) && bSet.has(diff)) {
+        difficulty = diff;
+        break;
+      }
+    }
+    if (!difficulty) {
+      difficulty = aDiffs.find(d => bSet.has(d)) || aDiffs[0] || bDiffs[0] || '';
+    }
     const aTopics = new Set(aCrit.topics || []);
     const bTopics = new Set(bCrit.topics || []);
     const intersect = [...aTopics].filter(t => bTopics.has(t));
