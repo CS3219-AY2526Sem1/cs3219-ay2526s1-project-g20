@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>API Test</title>
+  </head>
+  <body>
+    <h1>API Test</h1>
+    <div id="result">Loading...</div>
+
+    <script>
+      async function testAPI() {
+        try {
+          console.log("Testing API...");
+          const response = await fetch(
+            "http://localhost:3001/api/questions?limit=5",
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              mode: "cors",
+              credentials: "omit",
+            }
+          );
+
+          console.log("Response status:", response.status);
+          console.log("Response ok:", response.ok);
+
+          const data = await response.json();
+          console.log("Response data:", data);
+
+          document.getElementById("result").innerHTML = `
+                    <h2>API Test Results:</h2>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${data.success}</p>
+                    <p><strong>Questions Count:</strong> ${
+                      data.data ? data.data.length : "N/A"
+                    }</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+        } catch (error) {
+          console.error("Error:", error);
+          document.getElementById("result").innerHTML = `
+                    <h2>Error:</h2>
+                    <p>${error.message}</p>
+                `;
+        }
+      }
+
+      testAPI();
+    </script>
+  </body>
+</html>

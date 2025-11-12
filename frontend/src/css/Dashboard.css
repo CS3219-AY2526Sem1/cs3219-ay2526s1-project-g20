@@ -1,0 +1,93 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.welcome-section {
+  margin-bottom: 1rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 1rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.progress-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-end;
+}
+
+.progress-info {
+  flex: 2 1 420px;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  flex: 1 1 260px;
+}
+
+.progress-bar {
+  background: #eee;
+  height: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progress-bar div {
+  width: 9%;
+  background: var(--accent, #2563eb);
+  height: 100%;
+}
+
+.kbd {
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-weight: 600;
+}
+
+.full {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.achievement {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.dot.gold { background: #f59e0b; }
+.dot.blue { background: #2563eb; }
+.dot.green { background: #10b981; }
+
+.gap-8 { gap: 8px; }
+.gap-14 { gap: 14px; }

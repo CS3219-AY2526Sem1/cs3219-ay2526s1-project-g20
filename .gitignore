@@ -1,0 +1,17 @@
+# Node / TypeScript
+node_modules/
+dist/
+.env
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+scripts/
+
+# VS Code settings
+.vscode/
+
+# Docker artifacts
+*.log
+*.pid
+*.seed

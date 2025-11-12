@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    /* File layout */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Target Node 20 features */
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+
+    /* Node types + interop */
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+
+    /* Build quality */
+    "strict": true,
+    "skipLibCheck": true,
+
+    /* Debug */
+    "sourceMap": true
+  },
+  "include": ["src"]
+}

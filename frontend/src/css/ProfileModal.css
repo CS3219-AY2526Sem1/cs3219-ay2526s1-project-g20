@@ -1,0 +1,123 @@
+.profile-modal {
+  min-width: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header section */
+.profile-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+/* Avatar styling */
+.avatar-lg {
+  width: 56px;
+  height: 56px;
+  background: #333;
+  color: white;
+  font-weight: 600;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  position: relative;
+}
+
+.avatar-lg .dot {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  background: #4caf50;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* Text styles */
+.username {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #222;
+}
+
+.kicker {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Card for stats */
+.card {
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.p-muted {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.stat {
+  text-align: center;
+  flex: 1;
+}
+
+.stat .v {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.stat .l {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* Buttons */
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+  text-align: center;
+  text-decoration: none;
+  color: #333;
+}
+
+.btn:hover {
+  background: #eaeaea;
+  transform: scale(1.02);
+}
+
+.btn--logout {
+  background: #333;
+  color: white;
+  border: none;
+}
+
+.btn--logout:hover {
+  background: #555;
+}

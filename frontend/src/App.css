@@ -1,0 +1,153 @@
+:root {
+  --bg: #f9fafb;
+  --ink: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --pill: #111827;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+.container { max-width: 1024px; margin: 0 auto; padding: 24px 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 1024px) { .grid-3 { grid-template-columns: 2fr 1fr; } }
+.grid-row { display: grid; gap: 24px; }
+@media (min-width: 1024px) { .grid-row { grid-template-columns: 2fr 1fr; } }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card h3 { margin: 0 0 12px; font-weight: 600; }
+
+.topbar { background: #fff; border-bottom: 1px solid var(--border); }
+.topbar__inner { max-width: 1024px; margin: 0 auto; height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+.brand { font-weight: 600; }
+.nav { display: none; gap: 8px; }
+@media (min-width: 768px) { .nav { display: flex; } }
+.pill { padding: 8px 12px; border-radius: 999px; font-size: 13px; text-decoration: none; }
+.pill--active { color: #fff; background: var(--pill); }
+.pill--inactive { color: var(--ink); }
+.pill--inactive:hover { background: #f3f4f6; }
+
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #e5e7eb; font-size: 12px; display:flex; align-items:center; justify-content:center; }
+
+.row { display: flex; gap: 12px; }
+.btn { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; background: #fff; cursor: pointer; }
+.btn--dark { background: var(--ink); color: #fff; }
+.btn:hover { background: #f3f4f6; }
+.kbd { background: #111827; color:#fff; padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+
+.badge { display:inline-flex; align-items:center; padding: 4px 10px; border-radius:999px; font-size:12px; background:#f3f4f6; color:#374151; }
+.badge--dark { background:#111827; color:#fff; }
+.badge--red { background:#fee2e2; color:#b91c1c; }
+.badge--green { background:#dcfce7; color:#15803d; }
+
+.stat { text-align:center; }
+.stat .v { font-size: 20px; font-weight: 600; }
+.stat .l { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.list { display: flex; flex-direction: column; gap: 8px; }
+.item { display:flex; align-items:center; justify-content:space-between; background:#f3f4f6; border-radius:10px; padding: 10px 12px; }
+.item .meta { font-size:12px; color:var(--muted); }
+
+.progress { height: 10px; background:#e5e7eb; border-radius:8px; overflow:hidden; }
+.progress > div { height:100%; background:#111827; width: 9%; }
+
+.h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+.p-muted { color: var(--muted); margin: 0 0 16px; }
+/* ---------- forms & segmented tabs ---------- */
+.label { font-size: 13px; color: var(--muted); margin-bottom: 6px; display:block; }
+.input, .select {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: 12px; background: #f3f4f6; outline: none;
+}
+.input:focus, .select:focus { background:#fff; border-color:#d1d5db; }
+
+.segmented {
+  display:flex; gap:6px; background:#f3f4f6; border:1px solid var(--border);
+  border-radius:999px; padding:6px;
+}
+.segmented button {
+  flex:1; padding:8px 14px; border-radius:999px; border:none; background:transparent; cursor:pointer;
+}
+.segmented button.is-active { background:#fff; box-shadow:0 0 0 1px var(--border) inset; }
+
+/* ---------- profile bits ---------- */
+.card-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.avatar-lg {
+  width: 72px; height: 72px; border-radius: 50%;
+  display:flex; align-items:center; justify-content:center; color:#fff;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  font-weight:600; font-size:20px; position:relative;
+}
+.dot {
+  position:absolute; bottom:4px; right:4px; width:12px; height:12px; border-radius:999px; background:#22c55e; border:2px solid #fff;
+}
+.kicker { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
+.tags { display:flex; gap:8px; flex-wrap:wrap; }
+.tag { font-size:12px; padding:4px 10px; border-radius:999px; background:#eef2ff; color:#4338ca; }
+
+.bar { height: 10px; background:#e5e7eb; border-radius:8px; overflow:hidden; }
+.bar > div { height:100%; background:#111827; }
+
+/* small badge reuse */
+.badge--soft { background:#f3f4f6; color:#374151; }
+.badge--pill { border-radius:999px; padding:4px 10px; font-size:12px; display:inline-flex; align-items:center; }
+/* ===== Modal ===== */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(17,24,39,.45); z-index: 50;
+}
+.modal {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 51; padding: 16px;
+}
+.modal-card {
+  background: #fff; border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between; padding: 6px 10px 6px 14px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-weight: 600; }
+.modal-x {
+  border: 1px solid var(--border); background: #fff; border-radius: 999px; width: 28px; height: 28px; cursor: pointer;
+}
+.modal-x:hover { background: #f9fafb; }
+.modal-body { padding: 14px; }
+
+/* small helpers for the avatar button */
+.avatar-btn {
+  width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; border: 1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; font-weight:600;
+}
+.avatar-btn--grad {
+  background: linear-gradient(135deg, #6366f1, #06b6d4); color:#fff; border:none;
+}
+a.btn { text-decoration: none; }
+
+/* Shared button layout (no underline) */
+.btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Only non-dark buttons should use black text */
+.btn:not(.btn--dark) {
+  color: var(--ink);
+}
+
+/* Ensure dark button stays white-on-black */
+.btn--dark {
+  background: var(--ink);
+  color: #fff; /* stays white */
+}
+/* Bigger call-to-action button */
+.btn--xl {
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+}

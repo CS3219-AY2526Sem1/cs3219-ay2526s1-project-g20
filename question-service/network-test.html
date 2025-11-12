@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Network Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #1a1a1a;
+        color: white;
+      }
+      .result {
+        background: #2a2a2a;
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 8px;
+      }
+      .error {
+        color: #ff6b6b;
+      }
+      .success {
+        color: #51cf66;
+      }
+      pre {
+        background: #3a3a3a;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Network Test</h1>
+    <div id="result">Testing network connection...</div>
+
+    <script>
+      async function testNetwork() {
+        const resultDiv = document.getElementById("result");
+
+        try {
+          console.log("Testing network connection to localhost:3001...");
+
+          // Test 1: Basic fetch
+          resultDiv.innerHTML =
+            '<div class="success">Testing basic fetch...</div>';
+
+          const response = await fetch("http://localhost:3001/health", {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit",
+          });
+
+          console.log("Health check response:", response);
+
+          if (!response.ok) {
+            throw new Error(`Health check failed: ${response.status}`);
+          }
+
+          const healthData = await response.json();
+          console.log("Health data:", healthData);
+
+          // Test 2: Questions API
+          resultDiv.innerHTML =
+            '<div class="success">Health check passed! Testing questions API...</div>';
+
+          const questionsResponse = await fetch(
+            "http://localhost:3001/api/questions?limit=3",
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              mode: "cors",
+              credentials: "omit",
+            }
+          );
+
+          console.log("Questions response:", questionsResponse);
+
+          if (!questionsResponse.ok) {
+            throw new Error(
+              `Questions API failed: ${questionsResponse.status}`
+            );
+          }
+
+          const questionsData = await questionsResponse.json();
+          console.log("Questions data:", questionsData);
+
+          resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ SUCCESS!<br>
+                        Health: ${healthData.message}<br>
+                        Questions loaded: ${
+                          questionsData.data ? questionsData.data.length : 0
+                        }<br>
+                        <pre>${JSON.stringify(questionsData, null, 2)}</pre>
+                    </div>
+                `;
+        } catch (error) {
+          console.error("Network test error:", error);
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ NETWORK ERROR: ${error.message}<br>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+        }
+      }
+
+      // Run test when page loads
+      testNetwork();
+    </script>
+  </body>
+</html>

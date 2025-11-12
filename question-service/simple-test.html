@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple API Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #1a1a1a;
+        color: white;
+      }
+      .result {
+        background: #2a2a2a;
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 8px;
+      }
+      .error {
+        color: #ff6b6b;
+      }
+      .success {
+        color: #51cf66;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simple API Test</h1>
+    <div id="result">Testing...</div>
+
+    <script>
+      async function testAPI() {
+        const resultDiv = document.getElementById("result");
+
+        try {
+          console.log("Starting API test...");
+          resultDiv.innerHTML = '<div class="success">Making API call...</div>';
+
+          const response = await fetch(
+            "http://localhost:3001/api/questions?limit=5",
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              mode: "cors",
+              credentials: "omit",
+            }
+          );
+
+          console.log("Response received:", response);
+          console.log("Response status:", response.status);
+          console.log("Response ok:", response.ok);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+          console.log("Data received:", data);
+
+          if (data.success && data.data && data.data.length > 0) {
+            resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ SUCCESS!<br>
+                            Questions loaded: ${data.data.length}<br>
+                            First question: ${data.data[0].title}
+                        </div>
+                    `;
+          } else {
+            resultDiv.innerHTML = `
+                        <div class="error">
+                            ❌ API returned success=false or no data<br>
+                            Success: ${data.success}<br>
+                            Data length: ${
+                              data.data ? data.data.length : "undefined"
+                            }
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ ERROR: ${error.message}
+                    </div>
+                `;
+        }
+      }
+
+      // Run test when page loads
+      testAPI();
+    </script>
+  </body>
+</html>

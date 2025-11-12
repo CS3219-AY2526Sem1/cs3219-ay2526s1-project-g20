@@ -1,0 +1,206 @@
+services:
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=peerprep-questions 
+    volumes:
+      - mongo_data:/data/db
+      - ./question-service/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build:
+      context: ./user_service
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+      - DB_NAME=user_service_db
+      - USERS_COLLECTION=users
+      - SECRET_KEY=your-secret-key-here
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - PASSWORD_MIN_LENGTH=8
+    volumes:
+      - ./user_service:/app
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  question-service:
+    build:
+      context: ./question-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/peerprep-questions 
+      - PORT=3001
+    depends_on:
+      mongo:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+  matching-service:
+    build:
+      context: ./matching-service
+    ports:
+      - "8084:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - USER_SVC_BASE=http://user-service:8000
+      - QUESTIONS_SVC_BASE=http://question-service:3001
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-secret-key-here
+      - JWT_ALG=HS256
+      - ACCEPT_WINDOW_SECS=25
+      - TTL_SECS=120
+      - SWEEPER_INTERVAL_SECS=5
+      # for collaboration service
+      - COLLAB_WS_PUBLIC_URL=ws://localhost:8090/ws
+      - COLLAB_JWT_SECRET=dev-collab-secret
+      - COLLAB_JWT_ISSUER=peerprep-matching
+      - COLLAB_JWT_AUDIENCE=collab
+      - COLLAB_SESSION_TTL_MIN=120
+    depends_on:
+      redis:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      question-service:
+        condition: service_healthy
+      collaboration-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  collaboration-service:
+    build:
+      context: ./collaboration-service
+    container_name: collaboration-service
+    environment:
+      - PORT=8090
+      - HOST=0.0.0.0
+      - WS_PATH=/ws
+      - JWT_SECRET=dev-collab-secret
+      - JWT_ISSUER=peerprep-matching
+      - JWT_AUDIENCE=collab
+      - PROMETHEUS_ENABLED=true
+      - RECONNECT_GRACE_MS=5000
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8090/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - app-network
+
+  chatbot-service:
+    build:
+      context: ./chatbot-service
+    ports:
+      - "3302:3002"
+    environment:
+      - PORT=3002
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - CHATBOT_MODEL=${CHATBOT_MODEL:-gpt-4o-mini}
+    depends_on:
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3002/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend 
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_USER_SERVICE_URL=http://localhost:8000
+      - VITE_USERS_URL=http://localhost:8000
+      - VITE_QUESTION_SERVICE_URL=http://localhost:3001
+      - VITE_PROBLEMS_URL=http://localhost:3001
+      - VITE_MATCH_URL=http://localhost:8084
+      - VITE_CHATBOT_URL=http://localhost:3302
+    depends_on:
+      question-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      matching-service:
+        condition: service_healthy
+      collaboration-service:
+        condition: service_healthy
+      chatbot-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
