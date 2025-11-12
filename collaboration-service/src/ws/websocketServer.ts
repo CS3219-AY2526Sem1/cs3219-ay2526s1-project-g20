@@ -148,6 +148,28 @@ export async function initWebsocketServer(
           return;
         }
 
+        case "PARTNER_CHAT": {
+          if (!ctx.roomId) return;
+          const rawContent = (msg as any).content;
+          if (typeof rawContent !== "string") return;
+          const content = rawContent.trim();
+          if (!content) return;
+
+          const clientMessageId = typeof (msg as any).clientId === "string" ? (msg as any).clientId : undefined;
+          const payload: ServerMessage = {
+            type: "PARTNER_CHAT",
+            roomId: ctx.roomId,
+            content,
+            senderId: ctx.userId,
+            sentAt: new Date().toISOString(),
+            ...(clientMessageId ? { clientId: clientMessageId } : {}),
+          };
+
+          send(ws, payload);
+          rooms.broadcast(ctx.roomId, payload, ws);
+          return;
+        }
+
         default:
           return send(ws, { type: "ERROR", code: "UNKNOWN_TYPE", message: `Unknown type ${(msg as any).type}` });
       }

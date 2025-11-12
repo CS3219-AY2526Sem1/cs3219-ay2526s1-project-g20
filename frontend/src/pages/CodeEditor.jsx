@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { initVimMode } from "monaco-vim";
@@ -14,6 +14,8 @@ export default function CodeEditor() {
   const [language, setLanguage] = useState("python");
   const [output, setOutput] = useState("");
   const [testResults, setTestResults] = useState([]);
+  const [testCases, setTestCases] = useState([]);
+  const [usingExampleFallback, setUsingExampleFallback] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -23,13 +25,169 @@ export default function CodeEditor() {
   const [isResizing, setIsResizing] = useState(null);
   const [theme, setTheme] = useState("custom-dark");
   const [vimMode, setVimMode] = useState(false);
+  const [copiedBlockId, setCopiedBlockId] = useState(null);
+
+  const formatInlineText = useCallback((text) => {
+    if (!text) return null;
+
+    const elements = [];
+    const tokenRegex = /(\*\*[^*]+\*\*|\*[^*]+\*|__[^_]+__|_[^_]+_|`[^`]+`)/g;
+    let lastIndex = 0;
+    let match;
+    let keyIndex = 0;
+
+    while ((match = tokenRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        elements.push(text.slice(lastIndex, match.index));
+      }
+
+      const token = match[0];
+
+      if (token.startsWith("**") || token.startsWith("__")) {
+        elements.push(
+          <strong key={`strong-${keyIndex++}`}>{token.slice(2, -2)}</strong>
+        );
+      } else if (token.startsWith("*") || token.startsWith("_")) {
+        elements.push(
+          <em key={`italic-${keyIndex++}`}>{token.slice(1, -1)}</em>
+        );
+      } else if (token.startsWith("`")) {
+        elements.push(
+          <code key={`code-${keyIndex++}`}>{token.slice(1, -1)}</code>
+        );
+      }
+
+      lastIndex = match.index + token.length;
+    }
+
+    if (lastIndex < text.length) {
+      elements.push(text.slice(lastIndex));
+    }
+
+    return elements;
+  }, []);
+
+  const parseMessageSegments = useCallback((content) => {
+    if (!content) return [];
+
+    const codeRegex = /```([a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
+    const segments = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeRegex.exec(content)) !== null) {
+      const [fullMatch, language = "", codeContent = ""] = match;
+      if (match.index > lastIndex) {
+        segments.push({
+          type: "text",
+          content: content.slice(lastIndex, match.index),
+        });
+      }
+
+      segments.push({
+        type: "code",
+        language: language.trim(),
+        content: codeContent.replace(/\s+$/, ""),
+      });
+
+      lastIndex = match.index + fullMatch.length;
+    }
+
+    if (lastIndex < content.length) {
+      segments.push({
+        type: "text",
+        content: content.slice(lastIndex),
+      });
+    }
+
+    return segments;
+  }, []);
+
+  const renderTextSegment = useCallback(
+    (text) => {
+      if (!text) return null;
+
+      const lines = text.split("\n");
+
+      return lines.map((line, idx) => {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          return <div key={`gap-${idx}`} className="chat-text-gap" />;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,6})\s*(.*)$/);
+        if (headingMatch) {
+          const level = Math.min(headingMatch[1].length, 3);
+          return (
+            <div
+              key={`heading-${idx}`}
+              className={`chat-text-line chat-heading chat-heading-${level}`}
+            >
+              {formatInlineText(headingMatch[2])}
+            </div>
+          );
+        }
+
+        const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/);
+        if (bulletMatch) {
+          return (
+            <div key={`bullet-${idx}`} className="chat-text-line chat-text-bullet">
+              <span className="chat-bullet-marker">•</span>
+              <span>{formatInlineText(bulletMatch[1])}</span>
+            </div>
+          );
+        }
+
+        return (
+          <div key={`line-${idx}`} className="chat-text-line">
+            {formatInlineText(line)}
+          </div>
+        );
+      });
+    },
+    [formatInlineText]
+  );
+
+  const handleCopyCode = useCallback(async (code, blockId) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopiedBlockId(blockId);
+      setTimeout(() => setCopiedBlockId(null), 2000);
+    } catch (error) {
+      console.error("Failed to copy code block:", error);
+    }
+  }, []);
 
   const fetchQuestion = async () => {
     try {
       const response = await fetch(`${endpoints.questions}/api/questions/${questionId}`);
       const result = await response.json();
-      if (result.success) {
+      if (result.success && result.data) {
         setQuestion(result.data);
+
+        const normalizedTestCases = Array.isArray(result.data.testCases)
+          ? result.data.testCases
+              .filter((tc) => tc && (tc.input !== undefined || tc.expectedOutput !== undefined))
+              .map((tc) => ({
+                input: (tc.input ?? "").toString(),
+                expectedOutput: (tc.expectedOutput ?? "").toString(),
+              }))
+          : [];
+        setTestCases(normalizedTestCases);
+        setUsingExampleFallback(normalizedTestCases.length === 0);
         // Initialize with a default code template
         setCode(getDefaultCode(language, result.data));
       }
@@ -310,14 +468,18 @@ int main() {
     setTestResults([]);
 
     // Use testCases if available, otherwise use examples
-    const testCasesToUse = question?.testCases && question.testCases.length > 0 
-      ? question.testCases 
-      : (question?.examples && question.examples.length > 0
-          ? question.examples.map(ex => ({
-              input: ex.input || '',
-              expectedOutput: ex.output || ''
-            }))
-          : null);
+    const exampleFallback =
+      question?.examples && question.examples.length > 0
+        ? question.examples.map((ex) => ({
+            input: ex.input || "",
+            expectedOutput: ex.output || "",
+          }))
+        : [];
+
+    const testCasesToUse =
+      testCases.length > 0 ? testCases : exampleFallback.length > 0 ? exampleFallback : null;
+
+    setUsingExampleFallback(!(testCases.length > 0));
 
     if (!question || !testCasesToUse || testCasesToUse.length === 0) {
       setOutput("No test cases available for this question.");
@@ -343,6 +505,11 @@ int main() {
       setTestResults([]);
     }
   };
+
+  const passedCount = useMemo(
+    () => testResults.filter((result) => result.passed).length,
+    [testResults]
+  );
 
   const sendChatMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
@@ -546,6 +713,15 @@ int main() {
           </div>
 
           <div className="question-content">
+            {usingExampleFallback && (
+              <div className="section">
+                <div className="info-banner warning">
+                  <strong>Using Example Test Cases:</strong> Official automated tests are not available for this
+                  question yet. We&apos;ll run the visible examples instead.
+                </div>
+              </div>
+            )}
+
             <div className="section">
               <h3>Description</h3>
               <p>{question.description}</p>
@@ -675,6 +851,9 @@ int main() {
           {testResults.length > 0 && (
             <div className="test-results">
               <div className="test-results-header">Test Cases</div>
+              <div className="test-results-summary">
+                {passedCount}/{testResults.length} test cases passed.
+              </div>
               {testResults.map((result, idx) => (
                 <div key={idx} className={`test-result ${result.passed ? 'passed' : 'failed'}`}>
                   <div className="test-result-header">
@@ -683,12 +862,11 @@ int main() {
                       {result.passed ? '✓ Passed' : '✗ Failed'}
                     </span>
                   </div>
-                  {!result.passed && (
-                    <div className="test-details">
-                      <div>Expected: {result.expectedOutput}</div>
-                      <div>Got: {result.actualOutput}</div>
-                    </div>
-                  )}
+                  <div className="test-details">
+                    <div><strong>Input:</strong> {result.input}</div>
+                    <div><strong>Expected:</strong> {result.expectedOutput}</div>
+                    <div><strong>Got:</strong> {result.actualOutput}</div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -711,11 +889,47 @@ int main() {
                 Hi! I'm Preppy, your AI coding assistant! Ask me questions, request hints, or discuss your approach!
               </div>
             ) : (
-              chatMessages.map((msg, idx) => (
-                <div key={idx} className={`message ${msg.role}`}>
-                  {msg.content}
-                </div>
-              ))
+              chatMessages.map((msg, idx) => {
+                const segments = parseMessageSegments(msg.content);
+
+                return (
+                  <div key={idx} className={`message ${msg.role}`}>
+                    <div className="chat-message-content">
+                      {segments.length === 0 && <p>{msg.content}</p>}
+                      {segments.map((segment, segIdx) => {
+                        if (segment.type === "code") {
+                          const blockId = `${idx}-${segIdx}`;
+                          return (
+                            <div key={blockId} className="chat-code-block">
+                              <div className="chat-code-header">
+                                <span className="chat-code-language">
+                                  {segment.language || "code"}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="copy-button"
+                                  onClick={() => handleCopyCode(segment.content, blockId)}
+                                >
+                                  {copiedBlockId === blockId ? "Copied!" : "Copy"}
+                                </button>
+                              </div>
+                              <pre>
+                                <code>{segment.content}</code>
+                              </pre>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={`${idx}-${segIdx}`} className="chat-text-segment">
+                            {renderTextSegment(segment.content)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
             )}
             {chatLoading && (
               <div className="message assistant">

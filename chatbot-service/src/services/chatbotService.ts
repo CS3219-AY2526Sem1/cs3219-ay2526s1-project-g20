@@ -1,4 +1,8 @@
 import axios, { AxiosInstance } from "axios";
+import dotenv from "dotenv";
+
+// Ensure environment variables from .env are loaded before we access them
+dotenv.config();
 import {
   ChatMessage,
   ChatRequest,
