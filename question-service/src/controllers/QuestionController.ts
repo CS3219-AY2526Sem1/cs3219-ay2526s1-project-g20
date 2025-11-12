@@ -356,11 +356,10 @@ export class QuestionController {
         return;
       }
 
-      const [total, byDifficulty, byCategory] = await Promise.all([
+      const [total, byDifficultyRaw, byCategory] = await Promise.all([
         Question.countDocuments(),
         Question.aggregate([
           { $group: { _id: "$difficulty", count: { $sum: 1 } } },
-          { $sort: { _id: 1 } },
         ]),
         Question.aggregate([
           { $unwind: "$categories" },
@@ -368,6 +367,16 @@ export class QuestionController {
           { $sort: { count: -1 } },
         ]),
       ]);
+
+      const difficultyOrder = ["Easy", "Medium", "Hard"];
+      const byDifficulty = byDifficultyRaw.sort((a, b) => {
+        const ai = difficultyOrder.indexOf(String(a._id));
+        const bi = difficultyOrder.indexOf(String(b._id));
+        if (ai === -1 && bi === -1) return String(a._id).localeCompare(String(b._id));
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
 
       const stats = {
         total,
@@ -606,4 +615,3 @@ export class QuestionController {
 }
 
 export default new QuestionController();
-

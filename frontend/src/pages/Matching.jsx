@@ -14,6 +14,7 @@ export default function Matching() {
 
   const [selectedDifficulty, setSelectedDifficulty] = useState(FALLBACK_DIFFICULTIES[1]);
   const [selectedTopics, setSelectedTopics] = useState(() => new Set([FALLBACK_TOPICS[0]]));
+  const [relaxedDifficulties, setRelaxedDifficulties] = useState(() => new Set());
 
   const [mode, setMode] = useState("pair");
   const [msg, setMsg] = useState("");
@@ -71,6 +72,7 @@ export default function Matching() {
             setIsSearching(false);
             setIsPaused(false);
             setCriteriaLocked(false);
+            setRelaxedDifficulties(new Set());
             handled = true;
             break;
           case "YOU_ACCEPTED":
@@ -96,6 +98,7 @@ export default function Matching() {
             setIsSearching(false);
             setIsPaused(false);
             setCriteriaLocked(false);
+            setRelaxedDifficulties(new Set());
             handled = true;
             break;
           case "PARTNER_TIMEOUT":
@@ -119,6 +122,7 @@ export default function Matching() {
             setIsSearching(false);
             setIsPaused(false);
             setCriteriaLocked(false);
+            setRelaxedDifficulties(new Set());
             handled = true;
             break;
           case "REQUEST_TIMEOUT":
@@ -126,6 +130,7 @@ export default function Matching() {
             setIsSearching(false);
             setIsPaused(false);
             setCriteriaLocked(false);
+            setRelaxedDifficulties(new Set());
             handled = true;
             break;
           default:
@@ -138,6 +143,7 @@ export default function Matching() {
         setIsSearching(false);
         setIsPaused(false);
         setCriteriaLocked(false);
+        setRelaxedDifficulties(new Set());
 
         if (!didNavigateRef.current) {
           const info = getCollabInfo(nextStatus);
@@ -175,23 +181,25 @@ export default function Matching() {
       }
 
       if (!handled) {
-        switch (state) {
-          case "QUEUED":
-            setMsg("⌛ Still searching… hang tight!");
-            setCriteriaLocked(true);
-            break;
-          case "EXPIRED":
-            setMsg("Your request expired. Please start matching again.");
-            setIsSearching(false);
-            setIsPaused(false);
-            setCriteriaLocked(false);
-            break;
-          case "NONE":
-            if (!fromPoll) setMsg("");
-            setIsSearching(false);
-            setIsPaused(false);
-            setCriteriaLocked(false);
-            break;
+      switch (state) {
+        case "QUEUED":
+          setMsg("⌛ Still searching… hang tight!");
+          setCriteriaLocked(true);
+          break;
+        case "EXPIRED":
+          setMsg("Your request expired. Please start matching again.");
+          setIsSearching(false);
+          setIsPaused(false);
+          setCriteriaLocked(false);
+          setRelaxedDifficulties(new Set());
+          break;
+        case "NONE":
+          if (!fromPoll) setMsg("");
+          setIsSearching(false);
+          setIsPaused(false);
+          setCriteriaLocked(false);
+          setRelaxedDifficulties(new Set());
+          break;
           default:
             if (state && !handled) {
               setMsg(`ℹ️ Current status: ${state}`);
@@ -396,6 +404,7 @@ export default function Matching() {
       setIsSearching(true);
       setIsPaused(false);
       setElapsedSeconds(0);
+      setRelaxedDifficulties(new Set());
 
       const difficultyLabel =
         selectedDifficulty || selectedTopics.size === 0 ? selectedDifficulty ?? "any difficulty" : selectedDifficulty;
@@ -444,6 +453,7 @@ export default function Matching() {
       setIsPaused(false);
       setElapsedSeconds(0);
       setCriteriaLocked(false);
+      setRelaxedDifficulties(new Set());
     } catch (err) {
       setError(err.message || "Failed to cancel request.");
     }
@@ -489,12 +499,13 @@ export default function Matching() {
       setIsSearching(false);
       setIsPaused(false);
       setCriteriaLocked(false);
+      setRelaxedDifficulties(new Set());
     } catch (err) {
       setError(err.message || "Failed to decline match.");
     }
   }
 
-  async function handleRetry() {
+  async function handleRetry(mode = "same") {
     if (!ticket) {
       setError("Start a matching request first.");
       return;
@@ -503,13 +514,28 @@ export default function Matching() {
     try {
       const result = await api.post("match", "/match/retry", {
         token: ticket,
+        json: { mode },
       });
       if (result?.error) {
         setError(result.error);
         return;
       }
 
-      setMsg("🔁 Requeued with the same criteria.");
+      if (mode === "broaden") {
+        const relaxed = result?.applied?.difficulty;
+        if (relaxed) {
+          setRelaxedDifficulties((prev) => {
+            const next = new Set(prev);
+            next.add(relaxed);
+            return next;
+          });
+          setMsg(`🔁 Relaxed difficulty to include ${relaxed}. Searching again with broader matches.`);
+        } else {
+          setMsg("🔁 Relaxed criteria. Searching again with broader matches.");
+        }
+      } else {
+        setMsg("🔁 Requeued with the same criteria.");
+      }
 
       setIsSearching(true);
       setIsPaused(false);
@@ -529,6 +555,7 @@ export default function Matching() {
     setIsPaused(false);
     setElapsedSeconds(0);
     setCriteriaLocked(false);
+    setRelaxedDifficulties(new Set());
     setMode("pair");
     setSelectedDifficulty(difficultyOptions[1] ?? difficultyOptions[0] ?? null);
     setSelectedTopics(new Set(topicOptions[0] ? [topicOptions[0]] : []));
@@ -537,6 +564,20 @@ export default function Matching() {
   const reachedLimit = totalSelected >= 3;
   const canRetry = Boolean(ticket && (!status || ["QUEUED", "EXPIRED"].includes(status?.status ?? 'NONE')));
   const showRetry = isSearching && elapsedSeconds >= 30;
+  const relaxNeighbors = useMemo(() => {
+    if (!selectedDifficulty) return [];
+    const idx = difficultyOptions.indexOf(selectedDifficulty);
+    if (idx === -1) return [];
+    const neighbors = [];
+    if (idx - 1 >= 0) neighbors.push(difficultyOptions[idx - 1]);
+    if (idx + 1 < difficultyOptions.length) neighbors.push(difficultyOptions[idx + 1]);
+    return neighbors;
+  }, [selectedDifficulty, difficultyOptions]);
+  const nextRelaxOption = relaxNeighbors.find(diff => !relaxedDifficulties.has(diff));
+  const canShowRelax = showRetry && canRetry && Boolean(nextRelaxOption);
+  const relaxButtonLabel = nextRelaxOption
+    ? `Relax Difficulties (${nextRelaxOption})`
+    : 'Relax Difficulties';
 
   return (
     <div className="matching">
@@ -674,9 +715,16 @@ export default function Matching() {
               Cancel
             </button>
             {showRetry && (
-              <button className="btn" type="button" onClick={handleRetry} disabled={!canRetry}>
-                Retry
-              </button>
+              <>
+                <button className="btn" type="button" onClick={() => handleRetry("same")} disabled={!canRetry}>
+                  Retry
+                </button>
+                {canShowRelax && (
+                  <button className="btn" type="button" onClick={() => handleRetry("broaden")} disabled={!canShowRelax}>
+                    {relaxButtonLabel}
+                  </button>
+                )}
+              </>
             )}
             <button className="btn" type="button" onClick={resetForm}>
               Clear
