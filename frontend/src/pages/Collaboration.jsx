@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import * as Y from "yjs";
@@ -38,6 +38,9 @@ export default function Collaboration() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [copiedBlockId, setCopiedBlockId] = useState(null);
+  const [partnerNotice, setPartnerNotice] = useState(null);
+  const partnerNoticeTimeoutRef = useRef(null);
 
   // Layout (resizable panels) — match practice page defaults
   const [questionWidth, setQuestionWidth] = useState(400);
@@ -64,9 +67,190 @@ export default function Collaboration() {
     [state?.roomId, sessionId]
   );
 
+  const myUserId = useMemo(() => {
+    if (!state?.wsAuthToken) return null;
+    try {
+      const [, payload] = state.wsAuthToken.split(".");
+      if (!payload) return null;
+      const padding = "=".repeat((4 - (payload.length % 4)) % 4);
+      const base64 = (payload + padding).replace(/-/g, "+").replace(/_/g, "/");
+      const decoded = JSON.parse(atob(base64));
+      return decoded.sub || decoded.userId || decoded.uid || decoded.id || null;
+    } catch {
+      return null;
+    }
+  }, [state?.wsAuthToken]);
+
+  useEffect(() => {
+    return () => {
+      if (partnerNoticeTimeoutRef.current) {
+        clearTimeout(partnerNoticeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // base64 helpers
   const toB64 = (u8) => btoa(String.fromCharCode(...u8));
   const fromB64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+  const formatInlineText = useCallback((text) => {
+    if (!text) return null;
+
+    const elements = [];
+    const tokenRegex = /(\*\*[^*]+\*\*|\*[^*]+\*|__[^_]+__|_[^_]+_|`[^`]+`)/g;
+    let lastIndex = 0;
+    let match;
+    let keyIndex = 0;
+
+    while ((match = tokenRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        elements.push(text.slice(lastIndex, match.index));
+      }
+
+      const token = match[0];
+
+      if (token.startsWith("**") || token.startsWith("__")) {
+        elements.push(
+          <strong key={`strong-${keyIndex++}`}>{token.slice(2, -2)}</strong>
+        );
+      } else if (token.startsWith("*") || token.startsWith("_")) {
+        elements.push(
+          <em key={`italic-${keyIndex++}`}>{token.slice(1, -1)}</em>
+        );
+      } else if (token.startsWith("`")) {
+        elements.push(
+          <code key={`code-${keyIndex++}`}>{token.slice(1, -1)}</code>
+        );
+      }
+
+      lastIndex = match.index + token.length;
+    }
+
+    if (lastIndex < text.length) {
+      elements.push(text.slice(lastIndex));
+    }
+
+    return elements;
+  }, []);
+
+  const parseMessageSegments = useCallback((content) => {
+    if (!content) return [];
+
+    const codeRegex = /```([a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
+    const segments = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeRegex.exec(content)) !== null) {
+      const [fullMatch, language = "", codeContent = ""] = match;
+      if (match.index > lastIndex) {
+        segments.push({
+          type: "text",
+          content: content.slice(lastIndex, match.index),
+        });
+      }
+
+      segments.push({
+        type: "code",
+        language: language.trim(),
+        content: codeContent.replace(/\s+$/, ""),
+      });
+
+      lastIndex = match.index + fullMatch.length;
+    }
+
+    if (lastIndex < content.length) {
+      segments.push({
+        type: "text",
+        content: content.slice(lastIndex),
+      });
+    }
+
+    return segments;
+  }, []);
+
+  const renderTextSegment = useCallback(
+    (text) => {
+      if (!text) return null;
+
+      const lines = text.split("\n");
+
+      return lines.map((line, idx) => {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          return <div key={`gap-${idx}`} className="chat-text-gap" />;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,6})\s*(.*)$/);
+        if (headingMatch) {
+          const level = Math.min(headingMatch[1].length, 3);
+          return (
+            <div
+              key={`heading-${idx}`}
+              className={`chat-text-line chat-heading chat-heading-${level}`}
+            >
+              {formatInlineText(headingMatch[2])}
+            </div>
+          );
+        }
+
+        const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/);
+        if (bulletMatch) {
+          return (
+            <div key={`bullet-${idx}`} className="chat-text-line chat-text-bullet">
+              <span className="chat-bullet-marker">•</span>
+              <span>{formatInlineText(bulletMatch[1])}</span>
+            </div>
+          );
+        }
+
+        return (
+          <div key={`line-${idx}`} className="chat-text-line">
+            {formatInlineText(line)}
+          </div>
+        );
+      });
+    },
+    [formatInlineText]
+  );
+
+  const handleCopyCode = useCallback(async (code, blockId) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+      setCopiedBlockId(blockId);
+      setTimeout(() => setCopiedBlockId(null), 2000);
+    } catch (error) {
+      console.error("Failed to copy code block:", error);
+    }
+  }, []);
+
+  const messageLabel = useCallback((msg) => {
+    switch (msg.role) {
+      case "assistant":
+        return "Preppy";
+      case "partner":
+        return "Partner";
+      case "partner-self":
+        return "You → Partner";
+      case "system":
+        return "Notice";
+      default:
+        return "You";
+    }
+  }, []);
 
   // --- Fetch question if we only have an id ---
   useEffect(() => {
@@ -137,6 +321,34 @@ export default function Collaboration() {
         } else if (msg.type === "LEFT") {
           if (!state?.roomId || msg.roomId === state.roomId) {
             setPeerLeftOpen(true);
+          }
+        } else if (msg.type === "PARTNER_CHAT") {
+          const incoming = {
+            role: msg.senderId === myUserId ? "partner-self" : "partner",
+            content: msg.content,
+            senderId: msg.senderId,
+            sentAt: msg.sentAt,
+            clientId: msg.clientId,
+          };
+
+          setChatMessages((prev) => {
+            if (msg.senderId === myUserId && msg.clientId) {
+              const existingIndex = prev.findIndex((entry) => entry.clientId === msg.clientId);
+              if (existingIndex !== -1) {
+                const next = [...prev];
+                next[existingIndex] = { ...prev[existingIndex], ...incoming, delivered: true };
+                return next;
+              }
+            }
+            return [...prev, incoming];
+          });
+
+          if (msg.senderId !== myUserId) {
+            setPartnerNotice({ content: msg.content, sentAt: msg.sentAt });
+            if (partnerNoticeTimeoutRef.current) {
+              clearTimeout(partnerNoticeTimeoutRef.current);
+            }
+            partnerNoticeTimeoutRef.current = setTimeout(() => setPartnerNotice(null), 8000);
           }
         }
       } catch {
@@ -608,7 +820,57 @@ int main() {
   // Chat panel
   const sendChatMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
-    const userMessage = chatInput.trim();
+    const rawInput = chatInput.trim();
+    const isPartnerMessage = /^@partner\b/i.test(rawInput);
+
+    if (isPartnerMessage) {
+      const content = rawInput.replace(/^@partner\b\s*/i, "");
+      if (!content) {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "system", content: "Please type a message after @partner to reach your peer." },
+        ]);
+        setChatInput("");
+        return;
+      }
+
+      const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const pendingMessage = {
+        role: "partner-self",
+        content,
+        senderId: myUserId || "self",
+        sentAt: new Date().toISOString(),
+        clientId,
+        pending: true,
+      };
+
+      setChatMessages((prev) => [...prev, pendingMessage]);
+      setChatInput("");
+
+      try {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "PARTNER_CHAT",
+              content,
+              clientId,
+            })
+          );
+        } else {
+          throw new Error("Not connected to collaboration server");
+        }
+      } catch (error) {
+        console.error("Failed to send partner message:", error);
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "system", content: "Failed to send message to your partner. Please try again." },
+        ]);
+      }
+
+      return;
+    }
+
+    const userMessage = rawInput;
     setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setChatInput("");
     setChatLoading(true);
@@ -862,20 +1124,81 @@ int main() {
         <div className="chatbot-panel" style={{ width: `${chatbotWidth}px` }}>
           <div className="chatbot-header">
             <h3>Preppy</h3>
+            {partnerNotice && (
+              <div className="partner-alert">
+                <div className="partner-alert-title">Partner</div>
+                <div className="partner-alert-body">{partnerNotice.content}</div>
+                <button
+                  type="button"
+                  className="partner-alert-dismiss"
+                  onClick={() => {
+                    if (partnerNoticeTimeoutRef.current) {
+                      clearTimeout(partnerNoticeTimeoutRef.current);
+                    }
+                    setPartnerNotice(null);
+                  }}
+                  aria-label="Dismiss partner notification"
+                >
+                  ×
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="chatbot-messages">
-            {chatMessages.length === 0 ? (
+            {chatMessages.length === 0 && (
               <div className="message assistant">
-                Hi! I'm Preppy, your AI coding assistant! Ask me questions, request hints, or discuss your approach!
+                Hi! I'm Preppy, your AI coding assistant! Ask me questions, request hints, or discuss your approach. Need to reach your peer? Type <code>@partner</code> followed by your message.
               </div>
-            ) : (
-              chatMessages.map((msg, idx) => (
-                <div key={idx} className={`message ${msg.role}`}>
-                  {msg.content}
-                </div>
-              ))
             )}
+            {chatMessages.map((msg, idx) => {
+              const segments = parseMessageSegments(msg.content);
+              const key = msg.clientId || `chat-${idx}`;
+              const label = messageLabel(msg);
+
+              return (
+                <div key={key} className={`message ${msg.role}`}>
+                  <div className="chat-message-meta">
+                    <span>{label}</span>
+                    {msg.pending && <span className="chat-pending-indicator">Sending…</span>}
+                  </div>
+                  <div className="chat-message-content">
+                    {segments.length === 0 ? (
+                      <div className="chat-text-segment">{renderTextSegment(msg.content)}</div>
+                    ) : (
+                      segments.map((segment, segIdx) => {
+                        if (segment.type === "code") {
+                          const blockId = `${key}-code-${segIdx}`;
+                          return (
+                            <div key={blockId} className="chat-code-block">
+                              <div className="chat-code-header">
+                                <span className="chat-code-language">{segment.language || "code"}</span>
+                                <button
+                                  type="button"
+                                  className="copy-button"
+                                  onClick={() => handleCopyCode(segment.content, blockId)}
+                                >
+                                  {copiedBlockId === blockId ? "Copied!" : "Copy"}
+                                </button>
+                              </div>
+                              <pre>
+                                <code>{segment.content}</code>
+                              </pre>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={`${key}-text-${segIdx}`} className="chat-text-segment">
+                            {renderTextSegment(segment.content)}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
             {chatLoading && (
               <div className="message assistant">
                 <em>AI is typing...</em>
@@ -889,7 +1212,7 @@ int main() {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyPress={handleChatKeyPress}
-              placeholder="Ask for help or hints..."
+              placeholder="Ask Preppy… or type @partner to message your peer"
               disabled={chatLoading}
             />
             <button

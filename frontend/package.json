@@ -10,8 +10,9 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000"
   },
   "dependencies": {
-    "lucide-react": "^0.553.0",
     "@monaco-editor/react": "^4.7.0",
+    "@rollup/rollup-linux-arm64-musl": "^4.53.2",
+    "lucide-react": "^0.553.0",
     "monaco-editor": "^0.54.0",
     "monaco-vim": "^0.4.2",
     "react": "18.2.0",

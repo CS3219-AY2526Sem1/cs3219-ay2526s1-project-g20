@@ -138,6 +138,35 @@ services:
     networks:
       - app-network
 
+  chatbot-service:
+    build:
+      context: ./chatbot-service
+    ports:
+      - "3302:3002"
+    environment:
+      - PORT=3002
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - CHATBOT_MODEL=${CHATBOT_MODEL:-gpt-4o-mini}
+    depends_on:
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3002/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   frontend:
     build:
       context: ./frontend 
@@ -153,6 +182,7 @@ services:
       - VITE_QUESTION_SERVICE_URL=http://localhost:3001
       - VITE_PROBLEMS_URL=http://localhost:3001
       - VITE_MATCH_URL=http://localhost:8084
+      - VITE_CHATBOT_URL=http://localhost:3302
     depends_on:
       question-service:
         condition: service_healthy
@@ -161,6 +191,8 @@ services:
       matching-service:
         condition: service_healthy
       collaboration-service:
+        condition: service_healthy
+      chatbot-service:
         condition: service_healthy
     restart: unless-stopped
     networks:

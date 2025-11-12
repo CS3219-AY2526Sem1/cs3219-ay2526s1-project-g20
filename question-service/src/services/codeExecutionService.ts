@@ -91,6 +91,7 @@ for idx, test_case in enumerate(test_cases):
         input_data = test_case['input']
         nums = None
         target = None
+        parsed_input = input_data
         
         # Handle different input formats
         # Ensure input_data is a string
@@ -99,14 +100,20 @@ for idx, test_case in enumerate(test_cases):
         
         # Format 1: "nums = [2,7,11,15], target = 9"
         if 'nums =' in input_data and 'target =' in input_data:
-            nums_match = re.search(r'nums\s*=\s*(\[.*?\])', input_data)
-            target_match = re.search(r'target\s*=\s*(-?\d+)', input_data)
-            if nums_match and target_match:
-                try:
-                    nums = json.loads(nums_match.group(1).strip())
-                    target = int(target_match.group(1))
-                except:
-                    pass
+            try:
+                nums_section, target_section = input_data.split('target =', 1)
+                nums_str = nums_section.split('nums =', 1)[1].strip()
+                if nums_str.endswith(','):
+                    nums_str = nums_str[:-1].strip()
+                nums = json.loads(nums_str)
+                target_str = target_section.strip()
+                if ',' in target_str:
+                    target_str = target_str.split(',', 1)[0].strip()
+                target = int(target_str)
+                parsed_input = [nums, target]
+            except Exception:
+                nums = None
+                target = None
         # Format 2: "[2,7,11,15] 9" (array string followed by space and target)
         elif isinstance(input_data, str) and input_data.strip().startswith('[') and ' ' in input_data:
             # Split by space - last part should be target, first part should be array
@@ -117,6 +124,7 @@ for idx, test_case in enumerate(test_cases):
                     target_str = parts[1].strip()
                     nums = json.loads(nums_str)
                     target = int(target_str)
+                    parsed_input = [nums, target]
                 except:
                     pass
         # Format 3: Try to parse as JSON array with 2 elements
@@ -126,10 +134,46 @@ for idx, test_case in enumerate(test_cases):
                 if isinstance(parsed, list) and len(parsed) == 2:
                     nums = parsed[0]
                     target = parsed[1]
+                    parsed_input = parsed
                 else:
                     input_data = parsed
             except:
                 pass
+
+        # Format 4: Single assignment like "n = 2"
+        if nums is None and target is None and isinstance(input_data, str) and '=' in input_data:
+            assign_match = re.match(r'\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*(-?\d+)\s*$', input_data)
+            if assign_match:
+                try:
+                    value = int(assign_match.group(1))
+                    parsed_input = value
+                    input_data = value
+                except Exception:
+                    parsed_input = input_data
+
+        # Attempt to evaluate assignment statements to extract values
+        if nums is None and target is None and isinstance(input_data, str) and '=' in input_data:
+            try:
+                local_env = {}
+                exec(input_data, {}, local_env)
+                if 'nums' in local_env and 'target' in local_env:
+                    nums = local_env['nums']
+                    target = local_env['target']
+                    parsed_input = [nums, target]
+                elif len(local_env) == 1:
+                    parsed_input = next(iter(local_env.values()))
+                    input_data = parsed_input
+            except Exception:
+                pass
+
+        # Additional normalization: convert plain numeric strings to integers
+        if isinstance(parsed_input, str):
+            stripped_value = parsed_input.strip()
+            if stripped_value.lstrip('-').isdigit():
+                try:
+                    parsed_input = int(stripped_value)
+                except Exception:
+                    parsed_input = parsed_input
         
         # Call solution function
         # If we have nums and target, pass them as separate arguments
@@ -142,32 +186,40 @@ for idx, test_case in enumerate(test_cases):
                 try:
                     sig = inspect.signature(solution)
                     param_count = len(sig.parameters)
+                    input_for_call = parsed_input
+                    if param_count == 1 and isinstance(input_for_call, str):
+                        stripped_value = input_for_call.strip()
+                        if stripped_value.lstrip('-').isdigit():
+                            try:
+                                input_for_call = int(stripped_value)
+                            except Exception:
+                                input_for_call = input_for_call
                     
                     if param_count == 2:
                         # Function expects 2 parameters
-                        if isinstance(input_data, list) and len(input_data) == 2:
-                            result = solution(input_data[0], input_data[1])
+                        if isinstance(input_for_call, list) and len(input_for_call) == 2:
+                            result = solution(input_for_call[0], input_for_call[1])
                         else:
                             # Try to parse input_data as JSON if it's a string
-                            if isinstance(input_data, str):
+                            if isinstance(input_for_call, str):
                                 try:
-                                    parsed = json.loads(input_data)
+                                    parsed = json.loads(input_for_call)
                                     if isinstance(parsed, list) and len(parsed) == 2:
                                         result = solution(parsed[0], parsed[1])
                                     else:
-                                        result = solution(input_data)
+                                        result = solution(input_for_call)
                                 except:
-                                    result = solution(input_data)
+                                    result = solution(input_for_call)
                             else:
-                                result = solution(input_data)
+                                result = solution(input_for_call)
                     elif param_count == 1:
-                        result = solution(input_data)
+                        result = solution(input_for_call)
                     else:
                         # Last resort: try with input_data as single argument
-                        result = solution(input_data)
+                        result = solution(input_for_call)
                 except Exception as e:
                     # If signature inspection fails, try with input_data
-                    result = solution(input_data)
+                    result = solution(parsed_input)
         elif 'main' in globals():
             import inspect
             sig = inspect.signature(main)
@@ -175,12 +227,12 @@ for idx, test_case in enumerate(test_cases):
             
             if nums is not None and target is not None:
                 result = main(nums, target)
-            elif param_count == 2 and isinstance(input_data, list) and len(input_data) == 2:
-                result = main(input_data[0], input_data[1])
+            elif param_count == 2 and isinstance(parsed_input, list) and len(parsed_input) == 2:
+                result = main(parsed_input[0], parsed_input[1])
             elif param_count == 1:
-                result = main(input_data)
+                result = main(parsed_input)
             else:
-                result = main(input_data)
+                result = main(parsed_input)
         else:
             raise Exception("No solution or main function found")
         
