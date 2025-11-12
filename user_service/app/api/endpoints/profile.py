@@ -18,12 +18,3 @@ async def get_profile(current_user: Dict[str, Any] = Depends(AuthService.get_cur
         last_login=current_user["last_login"]
     )
     
-@router.patch("/username")
-async def update_username(
-    update_data: UsernameUpdate,
-    current_user = Depends(AuthService.get_current_user)):
-    await UserService.update_user_username(
-        user_id=str(current_user["_id"]),
-        new_username=update_data.new_username
-    )
-    return {"message": "Username updated"}
