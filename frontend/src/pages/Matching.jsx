@@ -183,7 +183,7 @@ export default function Matching() {
       if (!handled) {
       switch (state) {
         case "QUEUED":
-          setMsg("⌛ Still searching… hang tight!");
+          setMsg("Still searching… hang tight!");
           setCriteriaLocked(true);
           break;
         case "EXPIRED":
@@ -202,7 +202,7 @@ export default function Matching() {
           break;
           default:
             if (state && !handled) {
-              setMsg(`ℹ️ Current status: ${state}`);
+              setMsg(`Current status: ${state}`);
             }
             break;
         }
@@ -425,7 +425,7 @@ export default function Matching() {
       setCriteriaLocked(true);
       await requestMatch(matchToken);
       setTicket(matchToken);
-      setMsg("🎯 Request submitted. We’ll notify you once another learner accepts.");
+      setMsg("Request submitted. We’ll notify you once another learner accepts.");
     } catch (err) {
       setTicket(null);
       setStatus(null);
@@ -446,7 +446,7 @@ export default function Matching() {
     setError("");
     try {
       await api.post("match", "/match/cancel", { token: ticket });
-      setMsg("🛑 Matching cancelled.");
+      setMsg("Matching cancelled.");
       setStatus(null);
       setTicket(null);
       setIsSearching(false);
@@ -472,7 +472,7 @@ export default function Matching() {
         json: { pairId: status.pairId },
       });
       if (result?.error) throw new Error(result.error);
-      setMsg("✅ You have accepted the match! Waiting for the other user.");
+      setMsg("You have accepted the match! Waiting for the other user.");
       setStatus((prev) => (prev ? { ...prev, accepted: true } : { status: "PENDING_ACCEPT", accepted: true }));
       setIsPaused(true);
     } catch (err) {
@@ -493,7 +493,7 @@ export default function Matching() {
         json: { pairId: status.pairId },
       });
       if (result?.error) throw new Error(result.error);
-      setMsg("🚫 You have declined the match.");
+      setMsg("You have declined the match.");
       setStatus(null);
       setTicket(null);
       setIsSearching(false);
@@ -529,12 +529,12 @@ export default function Matching() {
             next.add(relaxed);
             return next;
           });
-          setMsg(`🔁 Relaxed difficulty to include ${relaxed}. Searching again with broader matches.`);
+          setMsg(`Relaxed difficulty to include ${relaxed}. Searching again with broader matches.`);
         } else {
-          setMsg("🔁 Relaxed criteria. Searching again with broader matches.");
+          setMsg("Relaxed criteria. Searching again with broader matches.");
         }
       } else {
-        setMsg("🔁 Requeued with the same criteria.");
+        setMsg("Requeued with the same criteria.");
       }
 
       setIsSearching(true);
@@ -604,14 +604,6 @@ export default function Matching() {
                 disabled={isLoading || isSearching || criteriaLocked}
               >
                 Pair Match
-              </button>
-              <button
-                type="button"
-                className={mode === "solo" ? "is-active" : ""}
-                onClick={() => setMode("solo")}
-                disabled={isLoading || isSearching || criteriaLocked}
-              >
-                Solo Practice
               </button>
             </div>
           </div>
@@ -695,10 +687,10 @@ export default function Matching() {
                 onClick={handleAccept}
                 disabled={Boolean(status?.accepted)}
               >
-                ✅ Accept
+                Accept
               </button>
               <button className="btn btn--danger" type="button" onClick={handleDecline}>
-                🚫 Decline
+                Decline
               </button>
             </div>
           )}
@@ -709,7 +701,7 @@ export default function Matching() {
               type="submit"
               disabled={isLoading || optionsLoading || isSearching || totalSelected === 0}
             >
-              ⚡ Start Matching
+              Start Matching
             </button>
             <button className="btn" type="button" onClick={handleCancel} disabled={!ticket}>
               Cancel
