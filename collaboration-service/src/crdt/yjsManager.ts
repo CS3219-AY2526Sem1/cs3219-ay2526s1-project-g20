@@ -35,7 +35,10 @@ export class YjsManager {
     // Relay doc updates to connections in this room
     doc.on("update", (update, origin) => {
       this.opts.logger?.debug?.({ roomId, bytes: update.length }, "yjs doc update");
+
+      const originWs = origin instanceof WebSocket ? origin as WebSocket : undefined;
       for (const [ws] of conns) {
+        if (originWs && ws === originWs) continue;
         if (ws.readyState === ws.OPEN) {
           ws.send(JSON.stringify({ type: "YJS_UPDATE", payloadB64: uint8ToB64(update) }));
         }
@@ -109,13 +112,15 @@ export class YjsManager {
     room.lastActive = Date.now();
   }
 
-  applyAwareness(roomId: RoomId, update: Uint8Array, origin: any) {
+  applyAwareness(roomId: RoomId, update: Uint8Array, origin?: any) {
     const room = this.getOrCreate(roomId);
     applyAwarenessUpdate(room.awareness, update, origin);
     room.lastActive = Date.now();
 
-    // Broadcast awareness update to peers
+    // Broadcast awareness update to peers, except the sender (if known)
+    const originWs = origin instanceof WebSocket ? (origin as WebSocket) : undefined;
     for (const [ws] of room.conns) {
+      if (originWs && ws === originWs) continue;
       if (ws.readyState === ws.OPEN) {
         ws.send(JSON.stringify({ type: "AWARENESS_UPDATE", payloadB64: uint8ToB64(update) }));
       }

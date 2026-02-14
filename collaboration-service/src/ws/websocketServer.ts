@@ -136,7 +136,7 @@ export async function initWebsocketServer(
           if (!ctx.roomId) return;
           const payloadB64 = (msg as any).payloadB64;
           if (!payloadB64) return;
-          y.applyUpdate(ctx.roomId, b64ToUint8(payloadB64), { userId: ctx.userId });
+          y.applyUpdate(ctx.roomId, b64ToUint8(payloadB64), ws);
           return;
         }
 
@@ -144,7 +144,7 @@ export async function initWebsocketServer(
           if (!ctx.roomId) return;
           const payloadB64 = (msg as any).payloadB64;
           if (!payloadB64) return;
-          y.applyAwareness(ctx.roomId, b64ToUint8(payloadB64), { userId: ctx.userId });
+          y.applyAwareness(ctx.roomId, b64ToUint8(payloadB64), ws);
           return;
         }
 

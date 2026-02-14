@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import * as Y from "yjs";
+import { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate } from "y-protocols/awareness.js";
 import { initVimMode } from "monaco-vim";
 import { endpoints } from "../lib/api";
 import "../css/CodeEditor.css";
@@ -42,9 +43,12 @@ export default function Collaboration() {
   const [chatbotWidth, setChatbotWidth] = useState(350);
   const [isResizing, setIsResizing] = useState(null);
 
-  // --- Yjs doc + text ---
+  // --- Yjs doc + text + awareness---
   const ydoc = useMemo(() => new Y.Doc(), []);
   const ytext = useMemo(() => ydoc.getText("code"), [ydoc]);
+  const awareness = useMemo(() => new Awareness(ydoc), [ydoc]);
+  const remoteDecosRef = useRef([]);
+  const peerStylesRef = useRef(new Map());
 
   // --- Refs ---
   const wsRef = useRef(null);
@@ -94,9 +98,24 @@ export default function Collaboration() {
       setStatus("connected");
       ws.send(JSON.stringify({ type: "JOIN_ROOM", roomId: state.roomId }));
       joinedRef.current = true;
+
+      const colorFor = (id) => {
+      const h = (id * 2654435761) % 360;
+        return { solid: `hsl(${h}, 90%, 55%)`, alpha: `hsla(${h}, 90%, 55%, 0.25)` };
+      };
+
+      awareness.setLocalState({
+        name: "You",
+        color: colorFor(awareness.clientID).solid,
+        cursor: null,
+      });
+
+      const init = encodeAwarenessUpdate(awareness, [awareness.clientID]);
+      ws.send(JSON.stringify({ type: "AWARENESS_SET", payloadB64: toB64(init) }));
     };
 
     ws.onmessage = (evt) => {
+
       try {
         const msg = JSON.parse(evt.data);
         if (!msg?.type) return;
@@ -120,6 +139,14 @@ export default function Collaboration() {
               suppressLocalRef.current = false;
             }
           }
+        } else if (msg.type === "AWARENESS_UPDATE" && msg.payloadB64) {
+          const buf = fromB64(msg.payloadB64);
+          applyAwarenessUpdate(awareness, buf, "remote");
+          renderRemoteCursors();
+        } else if (msg.type === "AWARENESS_SYNC" && msg.payloadB64) {
+          const buf = fromB64(msg.payloadB64);
+          applyAwarenessUpdate(awareness, buf, "remote");
+          renderRemoteCursors();
         } else if (msg.type === "ERROR" && msg.message) {
           setStatus(`error: ${msg.message}`);
         } else if (msg.type === "LEFT") {
@@ -311,7 +338,120 @@ export default function Collaboration() {
       }
     };
     maybeMountVim();
+    renderRemoteCursors();
   };
+
+  // Cursor changes
+  useEffect(() => {
+    if (!editorRef.current || !modelRef.current) return;
+    const editor = editorRef.current;
+    const model = modelRef.current;
+
+    const sendAwareness = () => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+      const update = encodeAwarenessUpdate(awareness, [awareness.clientID]);
+      wsRef.current.send(JSON.stringify({
+        type: "AWARENESS_SET",
+        payloadB64: toB64(update),
+      }));
+    };
+
+    const onPos = editor.onDidChangeCursorPosition(() => {
+      const sel = editor.getSelection();
+      if (!sel) return;
+      const anchorOffset = model.getOffsetAt({ lineNumber: sel.selectionStartLineNumber, column: sel.selectionStartColumn });
+      const headOffset   = model.getOffsetAt({ lineNumber: sel.positionLineNumber,       column: sel.positionColumn });
+
+      awareness.setLocalStateField("cursor", { anchor: anchorOffset, head: headOffset });
+      sendAwareness();
+    });
+
+    const onSel = editor.onDidChangeCursorSelection(() => {
+      const sel = editor.getSelection();
+      if (!sel) return;
+      const anchorOffset = model.getOffsetAt({ lineNumber: sel.selectionStartLineNumber, column: sel.selectionStartColumn });
+      const headOffset   = model.getOffsetAt({ lineNumber: sel.positionLineNumber,       column: sel.positionColumn });
+
+      awareness.setLocalStateField("cursor", { anchor: anchorOffset, head: headOffset });
+      sendAwareness();
+    });
+
+    const onBlur = editor.onDidBlurEditorText(() => {
+      awareness.setLocalStateField("cursor", null);
+      sendAwareness();
+    });
+
+    return () => { onPos.dispose(); onSel.dispose(); onBlur.dispose(); };
+  }, [awareness]);
+
+  const renderRemoteCursors = () => {
+    if (!editorRef.current || !modelRef.current || !window.monaco) return;
+    const model = modelRef.current;
+
+    // Clear previous decorations
+    remoteDecosRef.current = editorRef.current.deltaDecorations(remoteDecosRef.current, []);
+
+    const decos = [];
+    const states = awareness.getStates(); // Map<clientID, state>
+    states.forEach((st, clientID) => {
+      if (!st || clientID === awareness.clientID) return;
+      const name = st.name || `Peer ${clientID}`;
+      const color = st.color || "hsl(200, 90%, 55%)";
+      const cursor = st.cursor;
+
+      // Ensure CSS for this peer exists
+      if (!peerStylesRef.current.has(clientID)) {
+        const s = document.createElement("style");
+        s.innerHTML = `
+          .remote-caret-${clientID} { border-left: 2px solid ${color}; margin-left: -1px; }
+          .remote-caret-label-${clientID}::after {
+            content: "${name}";
+            position: absolute; transform: translateY(-100%);
+            background: ${color}; color: white; font-size: 10px;
+            padding: 1px 4px; border-radius: 3px;
+          }
+          .remote-selection-${clientID} { background: ${color}40; }
+        `;
+        document.head.appendChild(s);
+        peerStylesRef.current.set(clientID, s);
+      }
+
+      if (cursor && Number.isFinite(cursor.anchor) && Number.isFinite(cursor.head)) {
+        const a = Math.max(0, Math.min(cursor.anchor, model.getValueLength()));
+        const h = Math.max(0, Math.min(cursor.head, model.getValueLength()));
+        const startPos = model.getPositionAt(Math.min(a, h));
+        const endPos   = model.getPositionAt(Math.max(a, h));
+
+        // Selection highlight
+        if (a !== h) {
+          decos.push({
+            range: new window.monaco.Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+            options: { className: `remote-selection remote-selection-${clientID}` }
+          });
+        }
+
+        // Caret (zero-length decoration with beforeContent)
+        const caretPos = model.getPositionAt(h);
+        decos.push({
+          range: new window.monaco.Range(caretPos.lineNumber, caretPos.column, caretPos.lineNumber, caretPos.column),
+          options: {
+            beforeContentClassName: `remote-caret remote-caret-${clientID}`,
+            afterContentClassName: `remote-caret-label remote-caret-label-${clientID}`,
+            stickiness: 1,
+            hoverMessage: { value: `**${name}**` },
+          },
+        });
+      }
+    });
+
+    remoteDecosRef.current = editorRef.current.deltaDecorations(remoteDecosRef.current, decos);
+  };
+
+  useEffect(() => {
+    const handler = () => renderRemoteCursors();
+    awareness.on("update", handler);
+    return () => awareness.off("update", handler);
+  }, [awareness]);
 
   // Theme switch (applies to Monaco + Vim status bar)
   useEffect(() => {
